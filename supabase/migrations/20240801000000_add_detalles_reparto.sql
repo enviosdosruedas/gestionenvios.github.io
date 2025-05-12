@@ -19,7 +19,7 @@ DROP COLUMN IF EXISTS paradas;
 CREATE TABLE public.DetallesReparto (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   reparto_id UUID NOT NULL REFERENCES public.Repartos(id) ON DELETE CASCADE,
-  cliente_reparto_id INTEGER NOT NULL REFERENCES public.ClientesReparto(id) ON DELETE RESTRICT, -- Assuming ClientesReparto.id is SERIAL (integer)
+  cliente_reparto_id INTEGER NOT NULL REFERENCES public.ClientesReparto(id) ON DELETE RESTRICT, -- Assuming ClientesReparto.id is SERIAL (integer)  CONSTRAINT fk_detallesreparto_reparto FOREIGN KEY (reparto_id) REFERENCES public.Repartos(id) ON DELETE CASCADE,
   valor_entrega NUMERIC(10, 2) NULL, -- For monetary value, e.g., up to 99,999,999.99
   detalle_entrega TEXT NULL,
   orden_visita INTEGER NOT NULL DEFAULT 0, -- To maintain order of items within a delivery

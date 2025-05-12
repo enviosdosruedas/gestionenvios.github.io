@@ -70,9 +70,8 @@ export interface Delivery {
   fecha: string | Date; // Date - can be string from DB or Date object in form
   repartidor_id: string; // UUID, foreign key to Driver
   repartidores?: Pick<Driver, 'nombre'> | null; // For eager loading driver name
-  // paradas: string[]; // This will be replaced by DetallesReparto fetched separately or nested
   cliente_nuestro_id?: string | null; // UUID, FK to ClientesNuestros - if a Reparto is tied to one main client
-  clientesnuestros?: Pick<ClienteNuestro, 'nombre'> | null; // For eager loading
+  clientesnuestros?: Pick<ClienteNuestro, 'id' | 'nombre'> | null; // For eager loading
   zona_id: string; 
   zonas?: Pick<Zone, 'nombre'> | null; // For eager loading zone name
   tanda: number; // Integer
@@ -131,7 +130,7 @@ export const ALL_SERVICES: ClientService[] = ["reparto viandas", "mensajería", 
 export const ALL_DAYS: DayOfWeek[] = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
 export const ALL_FRECUENCIAS_PARADA: FrecuenciaParada[] = ["diario", "lunes, miércoles y viernes", "semanal (especificar semana)", "único"];
 export const ALL_DRIVER_STATUSES: DriverStatus[] = ["activo", "inactivo"];
-export const ALL_DELIVERY_STATUSES: DeliveryStatus[] = ["pendiente", "en curso" | "entregado" | "cancelado" | "reprogramado"];
+export const ALL_DELIVERY_STATUSES: DeliveryStatus[] = ["pendiente", "en curso", "entregado", "cancelado", "reprogramado"];
 export const ALL_PRODUCT_STATUSES: ProductStatus[] = ["disponible", "agotado", "descontinuado"];
 export const ALL_TIPO_REPARTO_CLIENTE: TipoRepartoCliente[] = ["diario", "semanal", "quincenal"];
 
