@@ -48,9 +48,12 @@ export default function DeliveryReportPage() {
               estado_entrega,
               repartidores (nombre),
               zonas (nombre),
+              cliente_nuestro_id,
               clientesnuestros (id, nombre),
               detallesreparto (
                 id,
+                reparto_id,
+                cliente_reparto_id,
                 valor_entrega,
                 detalle_entrega,
                 orden_visita,
@@ -151,7 +154,7 @@ export default function DeliveryReportPage() {
   return (
     <div className="space-y-6 p-1 md:p-2 lg:p-4 print:p-0">
       <div className="print-header-container print:mb-4 print:flex print:items-center print:gap-4">
-        <img src="/favicon.svg" alt="ViandasXpress Logo" className="h-16 w-16 hidden print:block" />
+        <img src="/favicon.svg" alt="ViandasXpress Logo" className="h-16 w-16 hidden print:block" data-ai-hint="logo company" />
         <PageHeader
           title={`Reporte del Reparto #${reportData.id.substring(0, 8)}...`}
           description={`Detalles del reparto del ${formatDateSafe(reportData.fecha)}`}
@@ -191,7 +194,7 @@ export default function DeliveryReportPage() {
           <CardTitle>Detalle de Paradas</CardTitle>
           <CardDescription>Listado de todos los ítems de entrega en el orden de visita.</CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 print:p-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -236,3 +239,4 @@ export default function DeliveryReportPage() {
   );
 }
 
+    

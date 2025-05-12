@@ -112,7 +112,7 @@ body {
     font-size: 10pt;
     color: black !important; /* Ensure text is black for printing */
     background-color: white !important; /* Ensure background is white */
-    margin: 20mm; /* Add margins to the printed page */
+    margin: 15mm; /* Adjust margins for printing */
     -webkit-print-color-adjust: exact !important; 
     print-color-adjust: exact !important;
   }
@@ -144,16 +144,16 @@ body {
 
   /* Report specific print styles */
   .print-header-container {
-    display: flex !important; /* Ensure flex is applied for print */
+    display: flex !important; 
     align-items: center !important;
     gap: 1rem !important; 
-    margin-bottom: 1.5rem !important; 
+    margin-bottom: 1rem !important; 
   }
   
   .print-header-container img {
-    display: block !important; /* Ensure logo is visible */
-    height: 4rem !important; /* Adjust size as needed */
-    width: 4rem !important;  /* Adjust size as needed */
+    display: block !important; 
+    height: 3rem !important; 
+    width: 3rem !important;  
   }
 
   .page-header { 
@@ -161,69 +161,70 @@ body {
   }
   
   .page-header h1 {
-    font-size: 18pt !important;
-    color: #333333 !important;
+    font-size: 16pt !important; /* Slightly reduced for better fit */
+    color: #222222 !important; /* Darker black for titles */
   }
   
   .page-header p {
-    font-size: 10pt !important;
-    color: #555555 !important;
+    font-size: 9pt !important;
+    color: #444444 !important; /* Darker gray for descriptions */
   }
 
-  /* Hide the regular action buttons on the report page when printing */
   .page-header-actions-print-hide {
      display: none !important;
   }
 
-  /* Table improvements for print */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
-    font-size: 9pt !important; 
+    font-size: 8pt !important; /* Slightly smaller for more content fit */
+    table-layout: fixed; /* Helps with column widths */
   }
 
   th, td {
-    border: 1px solid #dee2e6 !important; /* Lighter border for table cells */
-    padding: 6px !important; 
+    border: 1px solid #cccccc !important; /* Consistent light gray border */
+    padding: 4px 6px !important; /* Adjust padding */
     text-align: left !important;
+    word-break: break-word; /* Allow long words to break and wrap */
+    vertical-align: top; /* Align content to top for consistency */
   }
   
   th {
-    background-color: #e9ecef !important; 
-    color: #212529 !important;
-    font-weight: 600 !important; /* Bolder headers */
+    background-color: #f2f2f2 !important; /* Lighter gray for headers */
+    color: #111111 !important; /* Very dark gray for header text */
+    font-weight: 600 !important; 
   }
   
   tr {
     page-break-inside: avoid !important; 
   }
   
-  /* Card improvements for print */
   .card {
-    border: 1px solid #dee2e6 !important;
+    border: 1px solid #dddddd !important;
     box-shadow: none !important;
-    margin-bottom: 1.5rem; /* Add some space between cards */
+    margin-bottom: 1rem; 
+    page-break-inside: avoid;
   }
   .card-header {
-    padding-bottom: 0.5rem !important;
-    border-bottom: 1px solid #e9ecef; /* Add a light border under card headers */
+    padding: 0.75rem 1rem !important; /* Consistent padding */
+    border-bottom: 1px solid #eeeeee; 
   }
   .card-title {
-    font-size: 14pt !important;
-    color: #333333 !important;
+    font-size: 12pt !important; /* Slightly reduced */
+    color: #222222 !important;
   }
   .card-description {
-    font-size: 9pt !important;
+    font-size: 8pt !important;
     color: #555555 !important;
   }
   .card-content {
-    padding-top: 0.75rem !important; /* Slightly more padding for content */
-    font-size: 9pt !important;
+    padding: 0.75rem 1rem !important; 
+    font-size: 8pt !important;
   }
-
-  /* Remove ShadCN UI Card default padding for print if needed */
-  .card-content.p-0.print\:p-0 {
+  /* This ensures if p-0 is on CardContent, it truly has no padding on print */
+  .card-content.print\:p-0 {
      padding: 0 !important;
   }
 }
 
+    
