@@ -1,33 +1,47 @@
 
-
 'use client';
 
-import React, { useState }from 'react';
+import React, { useState, useEffect }from 'react';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { optimizeRouteAction } from './actions';
 import { OptimizeRouteFormSchema, type OptimizeRouteFormValues } from './optimize-route.schema'; 
 import type { OptimizeDeliveryRouteOutput } from '@/ai/flows/optimize-delivery-route'; 
-import { Loader2, PlusCircle, Trash2, RouteIcon, AlertCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, RouteIcon, AlertCircle, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { supabase } from '@/lib/supabaseClient';
+import type { Delivery, ClienteNuestro, ClientReparto } from '@/lib/types';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+type RepartoWithDetails = Delivery & {
+  clientesnuestros: Pick<ClienteNuestro, 'id' | 'nombre' | 'direccion_retiro'> | null;
+  repartidores: { nombre: string } | null;
+};
 
 export default function OptimizeRoutePage() {
   const [optimizationResult, setOptimizationResult] = useState<OptimizeDeliveryRouteOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingContext, setIsLoadingContext] = useState(false);
+  const [ongoingDeliveries, setOngoingDeliveries] = useState<RepartoWithDetails[]>([]);
+  const [selectedClienteNuestro, setSelectedClienteNuestro] = useState<Pick<ClienteNuestro, 'id' | 'nombre' | 'direccion_retiro'> | null>(null);
+  const [availableClientesReparto, setAvailableClientesReparto] = useState<ClientReparto[]>([]);
+
   const { toast } = useToast();
 
   const form = useForm<OptimizeRouteFormValues>({
     resolver: zodResolver(OptimizeRouteFormSchema), 
     defaultValues: {
-      startLocation: '',
-      averageVehicleSpeed: 50, // Default speed in km/h
+      selectedContextRepartoId: undefined,
+      averageVehicleSpeed: 50, 
       newDeliveries: [{ address: '', priority: 1 }],
       vehicleCapacity: 100, 
       overallTimeWindowStart: '09:00',
@@ -37,8 +51,69 @@ export default function OptimizeRoutePage() {
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "newDeliveries", // Changed from "stops" to "newDeliveries"
+    name: "newDeliveries",
   });
+
+  const selectedContextRepartoId = form.watch('selectedContextRepartoId');
+
+  useEffect(() => {
+    const fetchOngoingDeliveries = async () => {
+      setIsLoadingContext(true);
+      try {
+        const { data, error } = await supabase
+          .from('repartos')
+          .select(`
+            id,
+            fecha,
+            tanda,
+            clientesnuestros (id, nombre, direccion_retiro),
+            repartidores (nombre)
+          `)
+          .eq('estado_entrega', 'en curso')
+          .order('fecha', { ascending: false });
+
+        if (error) throw error;
+        setOngoingDeliveries(data as RepartoWithDetails[] || []);
+      } catch (error: any) {
+        toast({ title: "Error", description: "No se pudieron cargar los repartos en curso.", variant: "destructive" });
+        console.error("Error fetching ongoing deliveries:", error);
+      } finally {
+        setIsLoadingContext(false);
+      }
+    };
+    fetchOngoingDeliveries();
+  }, [toast]);
+
+  useEffect(() => {
+    const updateContext = async () => {
+      if (selectedContextRepartoId) {
+        setIsLoadingContext(true);
+        const selectedReparto = ongoingDeliveries.find(d => d.id === selectedContextRepartoId);
+        if (selectedReparto && selectedReparto.clientesnuestros) {
+          setSelectedClienteNuestro(selectedReparto.clientesnuestros);
+          try {
+            const { data: clientesRepartoData, error: clientesRepartoError } = await supabase
+              .from('clientesreparto')
+              .select('*')
+              .eq('cliente_nuestro_id', selectedReparto.clientesnuestros.id);
+            if (clientesRepartoError) throw clientesRepartoError;
+            setAvailableClientesReparto(clientesRepartoData || []);
+          } catch (error: any) {
+            toast({ title: "Error", description: "No se pudieron cargar los clientes de reparto asociados.", variant: "destructive" });
+            setAvailableClientesReparto([]);
+          }
+        } else {
+          setSelectedClienteNuestro(null);
+          setAvailableClientesReparto([]);
+        }
+        setIsLoadingContext(false);
+      } else {
+        setSelectedClienteNuestro(null);
+        setAvailableClientesReparto([]);
+      }
+    };
+    updateContext();
+  }, [selectedContextRepartoId, ongoingDeliveries, toast]);
 
   async function onSubmit(values: OptimizeRouteFormValues) {
     setIsLoading(true);
@@ -71,7 +146,7 @@ export default function OptimizeRoutePage() {
     <div className="space-y-6">
       <PageHeader
         title="Optimización de Rutas de Entrega"
-        description="Ingrese los detalles para generar una ruta de entrega optimizada utilizando IA."
+        description="Seleccione un reparto en curso como referencia y añada nuevas paradas para generar una ruta optimizada."
       />
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -84,13 +159,26 @@ export default function OptimizeRoutePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="startLocation"
+                  name="selectedContextRepartoId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ubicación de Partida</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: Depósito Central, Mar del Plata" {...field} />
-                      </FormControl>
+                      <FormLabel>Reparto en Curso de Referencia</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingContext}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar reparto en curso..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isLoadingContext && <SelectItem value="loading" disabled>Cargando...</SelectItem>}
+                          {ongoingDeliveries.map(reparto => (
+                            <SelectItem key={reparto.id} value={reparto.id}>
+                              ID: {reparto.id.substring(0,6)}.. - Cliente: {reparto.clientesnuestros?.nombre || 'N/A'} - Repartidor: {reparto.repartidores?.nombre || 'N/A'} ({format(new Date(reparto.fecha), 'dd/MM/yy', {locale: es})})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Establece el cliente principal y el punto de partida contextual.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -109,18 +197,31 @@ export default function OptimizeRoutePage() {
                   )}
                 />
               </div>
+              
+              {selectedClienteNuestro && (
+                <Alert variant="default" className="bg-primary/5 border-primary/30">
+                  <Info className="h-4 w-4 text-primary" />
+                  <AlertTitle className="text-primary font-semibold">Contexto del Reparto Seleccionado</AlertTitle>
+                  <AlertDescription className="text-sm">
+                    <p><strong>Cliente Principal:</strong> {selectedClienteNuestro.nombre}</p>
+                    <p><strong>Punto de Partida (Dirección de Retiro):</strong> {selectedClienteNuestro.direccion_retiro || "No especificada"}</p>
+                    {selectedClienteNuestro.direccion_retiro ? null : <p className="text-destructive text-xs">Advertencia: El cliente principal no tiene una dirección de retiro configurada. La optimización usará una ubicación genérica o podría fallar.</p>}
+                  </AlertDescription>
+                </Alert>
+              )}
+
 
               <div>
-                <FormLabel>Nuevas Entregas a Planificar</FormLabel>
-                <FormDescription className="mb-2">Añada todas las direcciones a visitar y su prioridad (mayor número = mayor prioridad).</FormDescription>
+                <FormLabel>Nuevas Entregas a Planificar para: <span className="font-semibold">{selectedClienteNuestro?.nombre || "Cliente (seleccione reparto de referencia)"}</span></FormLabel>
+                <FormDescription className="mb-2">Añada las direcciones y prioridades. Todas las direcciones deben ser dentro de Mar del Plata.</FormDescription>
                 {fields.map((field, index) => (
-                  <div key={field.id} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-background">
+                  <div key={field.id} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-muted/30">
                     <FormField
                       control={form.control}
                       name={`newDeliveries.${index}.address`}
                       render={({ field: formField }) => ( 
                         <FormItem className="flex-grow w-full sm:w-auto">
-                           {index === 0 && <FormLabel className="text-xs">Dirección</FormLabel>}
+                           {index === 0 && <FormLabel className="text-xs text-muted-foreground">Dirección</FormLabel>}
                           <FormControl>
                             <Input placeholder="Ej: Av. Colón 1234, Mar del Plata" {...formField} />
                           </FormControl>
@@ -133,7 +234,7 @@ export default function OptimizeRoutePage() {
                       name={`newDeliveries.${index}.priority`}
                       render={({ field: formField }) => ( 
                         <FormItem className="w-full sm:w-24">
-                           {index === 0 && <FormLabel className="text-xs">Prioridad</FormLabel>}
+                           {index === 0 && <FormLabel className="text-xs text-muted-foreground">Prioridad</FormLabel>}
                           <FormControl>
                             <Input type="number" min="1" placeholder="1" {...formField} />
                           </FormControl>
@@ -143,7 +244,7 @@ export default function OptimizeRoutePage() {
                     />
                     <div className="self-start sm:self-end pt-1 sm:pt-0">
                       {fields.length > 1 && (
-                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} aria-label={`Eliminar parada ${index + 1}`}>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} aria-label={`Eliminar parada ${index + 1}`} className="text-destructive hover:bg-destructive/10">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
@@ -156,6 +257,7 @@ export default function OptimizeRoutePage() {
                   size="sm"
                   onClick={() => append({ address: '', priority: 1 })}
                   className="mt-2"
+                  disabled={!selectedContextRepartoId}
                 >
                   <PlusCircle className="mr-2 h-4 w-4" /> Añadir Parada
                 </Button>
@@ -208,7 +310,7 @@ export default function OptimizeRoutePage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isLoading} className="w-full md:w-auto">
+              <Button type="submit" disabled={isLoading || !selectedContextRepartoId} className="w-full md:w-auto">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -282,3 +384,4 @@ export default function OptimizeRoutePage() {
     </div>
   );
 }
+

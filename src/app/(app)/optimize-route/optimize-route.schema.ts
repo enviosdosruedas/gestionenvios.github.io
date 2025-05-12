@@ -4,37 +4,32 @@ import { z } from 'zod';
 export const NewDeliveryStopSchema = z.object({
   address: z.string().min(1, 'La dirección es requerida.'),
   priority: z.coerce.number().int().min(1, 'La prioridad debe ser un número positivo.'),
-  // Time windows per stop are optional in the flow, and the form currently only has global time windows.
-  // If individual time windows per stop are needed in the form, add them here.
 });
 
 export const OptimizeRouteFormSchema = z.object({
-  startLocation: z.string().min(1, 'La ubicación de partida es requerida.'),
+  selectedContextRepartoId: z.string().uuid("Debe seleccionar un reparto en curso de referencia."),
   averageVehicleSpeed: z.coerce.number().positive('La velocidad promedio debe ser un número positivo.'),
-  newDeliveries: z.array(NewDeliveryStopSchema).min(1, 'Debe ingresar al menos una parada nueva.'),
+  newDeliveries: z.array(NewDeliveryStopSchema).min(1, 'Debe ingresar al menos una parada nueva para optimizar.'),
   vehicleCapacity: z.coerce.number().min(1, 'La capacidad del vehículo es requerida.'),
   overallTimeWindowStart: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Formato de hora inválido (HH:MM).'),
   overallTimeWindowEnd: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Formato de hora inválido (HH:MM).'),
-  // ongoingDeliveries and trafficInfo are part of the Genkit flow but not collected in this form yet.
-  // If they need to be collected, add them here.
 }).refine(data => {
-    if (!data.overallTimeWindowStart || !data.overallTimeWindowEnd) return true;
+    if (!data.overallTimeWindowStart || !data.overallTimeWindowEnd) return true; // Allow validation if fields are not yet filled
     try {
-        const startHour = parseInt(data.overallTimeWindowStart.split(':')[0], 10);
-        const startMinute = parseInt(data.overallTimeWindowStart.split(':')[1], 10);
-        const endHour = parseInt(data.overallTimeWindowEnd.split(':')[0], 10);
-        const endMinute = parseInt(data.overallTimeWindowEnd.split(':')[1], 10);
+        const [startHour, startMinute] = data.overallTimeWindowStart.split(':').map(Number);
+        const [endHour, endMinute] = data.overallTimeWindowEnd.split(':').map(Number);
 
         if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
-            return true; 
+            return false; // Invalid time format already handled by regex, but good for safety
         }
         
-        const startTime = startHour * 60 + startMinute;
-        const endTime = endHour * 60 + endMinute;
+        const startTimeInMinutes = startHour * 60 + startMinute;
+        const endTimeInMinutes = endHour * 60 + endMinute;
         
-        return endTime > startTime;
+        return endTimeInMinutes > startTimeInMinutes;
     } catch (e) {
-        return true; 
+        // If parsing fails, let regex handle it or mark as invalid
+        return false; 
     }
 }, {
     message: "La hora de fin debe ser posterior a la hora de inicio.",
@@ -42,3 +37,4 @@ export const OptimizeRouteFormSchema = z.object({
 });
 
 export type OptimizeRouteFormValues = z.infer<typeof OptimizeRouteFormSchema>;
+
