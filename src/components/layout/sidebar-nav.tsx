@@ -1,8 +1,9 @@
+
 "use client"
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Users, Truck, MapPin, ShoppingBag, Route, Settings, Building } from "lucide-react"
+import { Home, Users, Truck, MapPin, ShoppingBag, Route, Settings, Building, UserRoundCog } from "lucide-react" // Added UserRoundCog
 
 import { cn } from "@/lib/utils"
 import {
@@ -15,8 +16,9 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/drivers", label: "Repartidores", icon: Truck },
   { href: "/clients", label: "Clientes", icon: Users },
+  { href: "/clientes-reparto", label: "Clientes Reparto", icon: UserRoundCog }, // Using UserRoundCog
   { href: "/zones", label: "Zonas", icon: MapPin },
-  { href: "/deliveries", label: "Repartos", icon: Building }, // Using Building for "Rounds/Deliveries"
+  { href: "/deliveries", label: "Repartos", icon: Building }, 
   { href: "/products", label: "Productos", icon: ShoppingBag },
   { href: "/optimize-route", label: "Optimizar Rutas", icon: Route },
   // { href: "/settings", label: "Configuración", icon: Settings }, // Example, if needed later

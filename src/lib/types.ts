@@ -1,12 +1,14 @@
 export type ClientService = "reparto viandas" | "mensajería" | "delivery" | "otros";
 export type DayOfWeek = "lunes" | "martes" | "miércoles" | "jueves" | "viernes" | "sábado" | "domingo";
 export type FrecuenciaParada = "diario" | "lunes, miércoles y viernes" | "semanal (especificar semana)" | "único";
+export type TipoRepartoCliente = "diario" | "semanal" | "quincenal";
+
 
 // ClientesNuestros
 export interface Client {
   id: string; // UUID
   nombre: string;
-  direccion_retiro?: string; // Added from schema update
+  direccion_retiro?: string; 
   servicios: ClientService[];
   dias_de_reparto: DayOfWeek[];
   zona_id: string; 
@@ -77,6 +79,22 @@ export interface Product {
   updated_at?: string;
 }
 
+// ClientesReparto (Clientes Terciarios)
+export interface ClientReparto {
+  id: number; // SERIAL
+  nombre: string;
+  direccion: string;
+  horario_inicio?: string; // TIME
+  horario_fin?: string; // TIME
+  restricciones?: string;
+  tipo_reparto?: TipoRepartoCliente;
+  dias_especificos?: DayOfWeek[]; // Array of DayOfWeek
+  cliente_nuestro_id: string; // UUID, FK to ClientesNuestros
+  created_at?: string;
+  updated_at?: string;
+}
+
+
 // For Route Optimization form (seems okay, separate from DB entities for now)
 export interface OptimizationStop {
   address: string;
@@ -90,6 +108,10 @@ export const ALL_FRECUENCIAS_PARADA: FrecuenciaParada[] = ["diario", "lunes, mi�
 export const ALL_DRIVER_STATUSES: DriverStatus[] = ["activo", "inactivo"];
 export const ALL_DELIVERY_STATUSES: DeliveryStatus[] = ["pendiente", "en curso", "entregado", "cancelado", "reprogramado"];
 export const ALL_PRODUCT_STATUSES: ProductStatus[] = ["disponible", "agotado", "descontinuado"];
+export const ALL_TIPO_REPARTO_CLIENTE: TipoRepartoCliente[] = ["diario", "semanal", "quincenal"];
+
 
 // Keeping old ALL_FREQUENCIES if it's used elsewhere, but new one is ALL_FRECUENCIAS_PARADA
 export const ALL_FREQUENCIES: Stop['frecuencia'][] = ["diario", "lunes, miércoles y viernes", "semanal (especificar semana)", "único"];
+
+```

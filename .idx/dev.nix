@@ -8,6 +8,7 @@
     pkgs.nodejs_20
     pkgs.zulu
     pkgs.corepack_latest
+    pkgs.python3
   ];
   # Sets environment variables in the workspace
   env = {};
