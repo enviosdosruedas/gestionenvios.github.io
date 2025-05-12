@@ -1,7 +1,7 @@
+
 "use client"
 
 import React from "react"
-import { Package2 } from "lucide-react"
 import {
   SidebarProvider,
   Sidebar,
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/sidebar"
 import { SidebarNav } from "@/components/layout/sidebar-nav"
 import { UserNav } from "@/components/layout/user-nav"
-import { Button } from "@/components/ui/button"
 import { Toaster } from "@/components/ui/toaster"
 
 
@@ -24,7 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar collapsible="icon" className="border-r border-sidebar-border">
         <SidebarHeader className="p-2 border-b border-sidebar-border">
           <div className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:size-8">
-            <Package2 className="h-6 w-6 text-sidebar-primary" />
+            <img src="/favicon.svg" alt="ViandasXpress Logo" className="h-6 w-6" />
             <span className="font-semibold text-lg text-sidebar-foreground group-data-[collapsible=icon]:hidden">
               ViandasXpress
             </span>
@@ -51,3 +50,4 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   )
 }
+

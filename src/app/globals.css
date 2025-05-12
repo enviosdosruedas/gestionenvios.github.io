@@ -112,7 +112,11 @@ body {
     font-size: 10pt;
     color: black !important; /* Ensure text is black for printing */
     background-color: white !important; /* Ensure background is white */
+    margin: 20mm; /* Add margins to the printed page */
+    -webkit-print-color-adjust: exact !important; 
+    print-color-adjust: exact !important;
   }
+
   .print\:hidden {
     display: none !important;
   }
@@ -125,39 +129,101 @@ body {
   .print\:border-none {
     border: none !important;
   }
+
   /* Hide sidebar and other non-essential UI elements */
   aside[data-sidebar="sidebar"], 
   button[data-sidebar="trigger"], 
   button[data-sidebar="rail"],
-  header.sticky { /* Assuming header is the one in AppLayout */
+  header.sticky { 
     display: none !important;
   }
   main {
     margin: 0 !important;
     padding: 0 !important;
   }
-  .page-header-actions { /* Add this class to the actions div in PageHeader if you want to hide it */
-    display: none !important;
+
+  /* Report specific print styles */
+  .print-header-container {
+    display: flex !important; /* Ensure flex is applied for print */
+    align-items: center !important;
+    gap: 1rem !important; 
+    margin-bottom: 1.5rem !important; 
   }
-  /* Ensure cards and tables print well */
-  .card {
-    border: 1px solid #ccc !important; /* Light border for cards in print */
-    page-break-inside: avoid;
+  
+  .print-header-container img {
+    display: block !important; /* Ensure logo is visible */
+    height: 4rem !important; /* Adjust size as needed */
+    width: 4rem !important;  /* Adjust size as needed */
   }
+
+  .page-header { 
+    margin-bottom: 0 !important; 
+  }
+  
+  .page-header h1 {
+    font-size: 18pt !important;
+    color: #333333 !important;
+  }
+  
+  .page-header p {
+    font-size: 10pt !important;
+    color: #555555 !important;
+  }
+
+  /* Hide the regular action buttons on the report page when printing */
+  .page-header-actions-print-hide {
+     display: none !important;
+  }
+
+  /* Table improvements for print */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
+    font-size: 9pt !important; 
   }
+
   th, td {
-    border: 1px solid #ddd !important;
-    padding: 4px !important;
+    border: 1px solid #dee2e6 !important; /* Lighter border for table cells */
+    padding: 6px !important; 
     text-align: left !important;
   }
+  
   th {
-    background-color: #f2f2f2 !important; /* Light grey for table headers */
+    background-color: #e9ecef !important; 
+    color: #212529 !important;
+    font-weight: 600 !important; /* Bolder headers */
   }
+  
+  tr {
+    page-break-inside: avoid !important; 
+  }
+  
+  /* Card improvements for print */
+  .card {
+    border: 1px solid #dee2e6 !important;
+    box-shadow: none !important;
+    margin-bottom: 1.5rem; /* Add some space between cards */
+  }
+  .card-header {
+    padding-bottom: 0.5rem !important;
+    border-bottom: 1px solid #e9ecef; /* Add a light border under card headers */
+  }
+  .card-title {
+    font-size: 14pt !important;
+    color: #333333 !important;
+  }
+  .card-description {
+    font-size: 9pt !important;
+    color: #555555 !important;
+  }
+  .card-content {
+    padding-top: 0.75rem !important; /* Slightly more padding for content */
+    font-size: 9pt !important;
+  }
+
   /* Remove ShadCN UI Card default padding for print if needed */
   .card-content.p-0.print\:p-0 {
      padding: 0 !important;
   }
 }
+

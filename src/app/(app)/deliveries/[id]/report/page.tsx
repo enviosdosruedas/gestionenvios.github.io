@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { supabase } from '@/lib/supabaseClient';
 import type { Delivery, DetalleReparto } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Printer, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
@@ -150,22 +150,25 @@ export default function DeliveryReportPage() {
   
   return (
     <div className="space-y-6 p-1 md:p-2 lg:p-4 print:p-0">
-      <PageHeader
-        title={`Reporte del Reparto #${reportData.id.substring(0, 8)}...`}
-        description={`Detalles del reparto del ${formatDateSafe(reportData.fecha)}`}
-        actions={
-          <div className="flex gap-2 print:hidden">
-            <Button variant="outline" asChild>
-              <Link href="/deliveries">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Volver
-              </Link>
-            </Button>
-            <Button onClick={handlePrint}>
-              <Printer className="mr-2 h-4 w-4" /> Exportar a PDF
-            </Button>
-          </div>
-        }
-      />
+      <div className="print-header-container print:mb-4 print:flex print:items-center print:gap-4">
+        <img src="/favicon.svg" alt="ViandasXpress Logo" className="h-16 w-16 hidden print:block" />
+        <PageHeader
+          title={`Reporte del Reparto #${reportData.id.substring(0, 8)}...`}
+          description={`Detalles del reparto del ${formatDateSafe(reportData.fecha)}`}
+          actions={
+            <div className="flex gap-2 print:hidden page-header-actions-print-hide">
+              <Button variant="outline" asChild>
+                <Link href="/deliveries">
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+                </Link>
+              </Button>
+              <Button onClick={handlePrint}>
+                <Printer className="mr-2 h-4 w-4" /> Exportar a PDF
+              </Button>
+            </div>
+          }
+        />
+      </div>
 
       <Card className="print:shadow-none print:border-none">
         <CardHeader>
@@ -232,3 +235,4 @@ export default function DeliveryReportPage() {
     </div>
   );
 }
+
