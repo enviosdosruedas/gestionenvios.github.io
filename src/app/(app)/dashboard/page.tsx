@@ -1,16 +1,20 @@
 
 'use client';
 
+import React, { useEffect, useState } from 'react';
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Truck, Users, MapPin, ShoppingBag, RouteIcon, PackageSearch, Hourglass, Activity, ShieldCheck, AlertTriangle, ClipboardList } from "lucide-react";
+import { Truck, Users, MapPin, ShoppingBag, RouteIcon, PackageSearch, Hourglass, AlertTriangle, ClipboardList } from "lucide-react";
 import Link from "next/link";
+import { supabase } from '@/lib/supabaseClient';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
 
 const dailyKpiCards = [
   { title: "Repartos de Hoy", value: "25", icon: PackageSearch, description: "Total programados" },
   { title: "Entregas Pendientes", value: "8", icon: Hourglass, description: "Por completar hoy" },
-  { title: "Repartidores Activos", value: "10", icon: Truck, description: "Listos para operar" },
+  { title: "Repartidores Activos (Total)", value: "10", icon: Truck, description: "Listos para operar" }, // Will be dynamic
   { title: "Incidentes Hoy", value: "1", icon: AlertTriangle, description: "Requiere atención", variant: "destructive" as const },
 ];
 
@@ -20,8 +24,88 @@ const generalKpiCards = [
   { title: "Productos Activos", value: "30+", icon: ShoppingBag, href: "/products", description: "Catálogo de productos" },
 ];
 
+interface OperationalStatus {
+  repartosEnCurso: number;
+  repartidoresActivos: number;
+  totalRepartidores: number;
+  alertasSistema: number;
+}
 
 export default function DashboardPage() {
+  const [operationalStatus, setOperationalStatus] = useState<OperationalStatus | null>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+
+  useEffect(() => {
+    const fetchOperationalStatus = async () => {
+      setIsLoadingStatus(true);
+      try {
+        const today = format(new Date(), 'yyyy-MM-dd');
+
+        const { data: repartosEnCursoData, error: repartosEnCursoError } = await supabase
+          .from('repartos')
+          .select('id', { count: 'exact' })
+          .eq('estado_entrega', 'en curso')
+          .eq('fecha', today);
+
+        if (repartosEnCursoError) throw repartosEnCursoError;
+
+        const { data: repartidoresActivosData, error: repartidoresActivosError } = await supabase
+          .from('repartidores')
+          .select('id', { count: 'exact' })
+          .eq('status', 'activo');
+        
+        if (repartidoresActivosError) throw repartidoresActivosError;
+
+        const { data: totalRepartidoresData, error: totalRepartidoresError } = await supabase
+          .from('repartidores')
+          .select('id', { count: 'exact' });
+
+        if (totalRepartidoresError) throw totalRepartidoresError;
+        
+        const { data: alertasData, error: alertasError } = await supabase
+          .from('repartos')
+          .select('id', {count: 'exact'})
+          .eq('fecha', today)
+          .in('estado_entrega', ['cancelado', 'reprogramado']);
+
+        if (alertasError) throw alertasError;
+
+        setOperationalStatus({
+          repartosEnCurso: repartosEnCursoData?.length || 0,
+          repartidoresActivos: repartidoresActivosData?.length || 0,
+          totalRepartidores: totalRepartidoresData?.length || 0,
+          alertasSistema: alertasData?.length || 0,
+        });
+
+      } catch (error) {
+        console.error("Error fetching operational status:", error);
+        // Optionally set a default/error state for operationalStatus
+        setOperationalStatus({
+          repartosEnCurso: 0,
+          repartidoresActivos: 0,
+          totalRepartidores: 0,
+          alertasSistema: 0,
+        });
+      } finally {
+        setIsLoadingStatus(false);
+      }
+    };
+
+    fetchOperationalStatus();
+  }, []);
+
+  // Update dynamic KPI card for active drivers
+  const updatedDailyKpiCards = dailyKpiCards.map(card => {
+    if (card.title === "Repartidores Activos (Total)") {
+      return {
+        ...card,
+        value: isLoadingStatus ? "..." : `${operationalStatus?.repartidoresActivos || 0} / ${operationalStatus?.totalRepartidores || 0}`,
+      };
+    }
+    return card;
+  });
+
+
   return (
     <div className="container mx-auto py-2">
       <PageHeader
@@ -32,7 +116,7 @@ export default function DashboardPage() {
       <section className="mb-8">
         <h2 className="text-xl font-semibold text-foreground mb-4">Actividad de Hoy</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {dailyKpiCards.map((card) => (
+          {updatedDailyKpiCards.map((card) => (
             <Card key={card.title} className={`shadow-lg hover:shadow-xl transition-shadow duration-300 ${card.variant === 'destructive' ? 'border-destructive bg-destructive/10' : ''}`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className={`text-sm font-medium ${card.variant === 'destructive' ? 'text-destructive' : 'text-primary'}`}>
@@ -41,7 +125,11 @@ export default function DashboardPage() {
                 <card.icon className={`h-5 w-5 ${card.variant === 'destructive' ? 'text-destructive' : 'text-muted-foreground'}`} />
               </CardHeader>
               <CardContent>
-                <div className={`text-3xl font-bold ${card.variant === 'destructive' ? 'text-destructive' : 'text-foreground'}`}>{card.value}</div>
+                {isLoadingStatus && card.title === "Repartidores Activos (Total)" ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <div className={`text-3xl font-bold ${card.variant === 'destructive' ? 'text-destructive' : 'text-foreground'}`}>{card.value}</div>
+                )}
                 <p className="text-xs text-muted-foreground mt-1">
                   {card.description}
                 </p>
@@ -66,7 +154,7 @@ export default function DashboardPage() {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start hover:bg-secondary/20">
-                <Link href="/deliveries"> {/* Corrected href to point to deliveries list, form is inside page */}
+                <Link href="/deliveries">
                   <Truck className="mr-2 h-4 w-4 text-accent" />
                   Nuevo Reparto
                 </Link>
@@ -78,7 +166,7 @@ export default function DashboardPage() {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start hover:bg-secondary/20">
-                <Link href="/clients"> {/* Corrected href to point to clients list, form is inside page */}
+                <Link href="/clients">
                   <Users className="mr-2 h-4 w-4 text-accent" />
                   Registrar Cliente
                 </Link>
@@ -120,21 +208,21 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-foreground">Repartos en Curso</p>
                   <p className="text-xs text-muted-foreground">Entregas activas ahora mismo</p>
                 </div>
-                <div className="text-lg font-semibold text-polynesian-blue-600">5</div>
+                {isLoadingStatus ? <Skeleton className="h-6 w-10"/> : <div className="text-lg font-semibold text-polynesian-blue-600">{operationalStatus?.repartosEnCurso ?? 0}</div>}
               </div>
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
                 <div>
                   <p className="text-sm font-medium text-foreground">Repartidores Disponibles</p>
                   <p className="text-xs text-muted-foreground">Listos para asignar nuevas tareas</p>
                 </div>
-                <div className="text-lg font-semibold text-green-600">7 / 10</div>
+                {isLoadingStatus ? <Skeleton className="h-6 w-16"/> : <div className="text-lg font-semibold text-green-600">{operationalStatus?.repartidoresActivos ?? 0} / {operationalStatus?.totalRepartidores ?? 0}</div>}
               </div>
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Alertas del Sistema</p>
-                  <p className="text-xs text-muted-foreground">Problemas o demoras detectadas</p>
+                  <p className="text-sm font-medium text-foreground">Alertas del Sistema (Hoy)</p>
+                  <p className="text-xs text-muted-foreground">Repartos cancelados o reprogramados hoy</p>
                 </div>
-                <div className="text-lg font-semibold text-red-600">2</div>
+                 {isLoadingStatus ? <Skeleton className="h-6 w-10"/> : <div className="text-lg font-semibold text-red-600">{operationalStatus?.alertasSistema ?? 0}</div>}
               </div>
             </CardContent>
           </Card>
@@ -161,4 +249,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
