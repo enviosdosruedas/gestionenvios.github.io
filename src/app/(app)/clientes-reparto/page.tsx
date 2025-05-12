@@ -20,19 +20,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
-import { ClientReparto, Client as ClienteNuestro, DayOfWeek, TipoRepartoCliente, ALL_DAYS, ALL_TIPO_REPARTO_CLIENTE } from '@/lib/types';
+import { ClientReparto, ClienteNuestro, DayOfWeek, TipoRepartoCliente, ALL_DAYS, ALL_TIPO_REPARTO_CLIENTE } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
-import ClientRepartoForm from './client-reparto-form'; // Renamed form component
+import ClientRepartoForm from './client-reparto-form'; 
 
 export default function ClientesRepartoPage() {
   const [clientsReparto, setClientsReparto] = useState<ClientReparto[]>([]);
   const [clientesNuestros, setClientesNuestros] = useState<ClienteNuestro[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false); // For form submission
+  const [isSubmitting, setIsSubmitting] = useState(false); 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClientReparto, setEditingClientReparto] = useState<ClientReparto | null>(null);
   const { toast } = useToast();
@@ -41,8 +41,8 @@ export default function ClientesRepartoPage() {
     setIsLoading(true);
     try {
       const [clientsRepartoRes, clientesNuestrosRes] = await Promise.all([
-        supabase.from('clientesreparto').select('*').order('nombre', { ascending: true }),
-        supabase.from('clientesnuestros').select('id, nombre').order('nombre', { ascending: true })
+        supabase.from('ClientesReparto').select('*').order('nombre', { ascending: true }),
+        supabase.from('ClientesNuestros').select('id, nombre').order('nombre', { ascending: true })
       ]);
 
       if (clientsRepartoRes.error) throw clientsRepartoRes.error;
@@ -67,11 +67,11 @@ export default function ClientesRepartoPage() {
     setIsSubmitting(true);
     try {
       if (editingClientReparto) {
-        const { error } = await supabase.from('clientesreparto').update(data).eq('id', editingClientReparto.id);
+        const { error } = await supabase.from('ClientesReparto').update(data).eq('id', editingClientReparto.id);
         if (error) throw error;
         toast({ title: "Cliente de Reparto Actualizado", description: "El cliente ha sido actualizado con éxito." });
       } else {
-        const { error } = await supabase.from('clientesreparto').insert([data]);
+        const { error } = await supabase.from('ClientesReparto').insert([data]);
         if (error) throw error;
         toast({ title: "Cliente de Reparto Creado", description: "El nuevo cliente ha sido creado con éxito." });
       }
@@ -88,7 +88,7 @@ export default function ClientesRepartoPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      const { error } = await supabase.from('clientesreparto').delete().eq('id', id);
+      const { error } = await supabase.from('ClientesReparto').delete().eq('id', id);
       if (error) throw error;
       fetchData();
       toast({ title: "Cliente de Reparto Eliminado", description: "El cliente ha sido eliminado.", variant: "destructive" });
@@ -187,4 +187,3 @@ export default function ClientesRepartoPage() {
     </>
   );
 }
-```

@@ -272,4 +272,3 @@ const ClientRepartoForm: React.FC<ClientRepartoFormProps> = ({
 };
 
 export default ClientRepartoForm;
-```
