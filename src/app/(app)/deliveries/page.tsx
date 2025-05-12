@@ -22,8 +22,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
-import type { Delivery, Driver, Zone, ClienteNuestro, ClientReparto, DetalleReparto } from '@/lib/types';
-import { ALL_DELIVERY_STATUSES, DeliveryStatus } from '@/lib/types';
+import type { Delivery, Driver, Zone, ClienteNuestro, ClientReparto, DetalleReparto, DeliveryStatusValue } from '@/lib/types';
+import { ALL_DELIVERY_STATUSES } from '@/lib/types';
 import { z } from 'zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -55,6 +55,8 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
+const NULL_VALUE_PLACEHOLDER = "__NULL_VALUE__";
+
 const detalleRepartoSchema = z.object({
   id: z.string().uuid().optional(), // for existing items during edit
   cliente_reparto_id: z.coerce.number().min(1, 'Seleccione un cliente de reparto.'),
@@ -63,7 +65,7 @@ const detalleRepartoSchema = z.object({
   orden_visita: z.number().int(),
 }).refine(data => data.valor_entrega != null || (data.detalle_entrega != null && data.detalle_entrega.trim() !== ''), {
   message: "Debe ingresar un valor o un detalle para la entrega.",
-  path: ["detalle_entrega"], 
+  path: ["detalle_entrega"],
 });
 
 
@@ -85,7 +87,7 @@ export default function DeliveriesPage() {
   const [zones, setZones] = useState<Pick<Zone, 'id' | 'nombre'>[]>([]);
   const [clientesNuestros, setClientesNuestros] = useState<Pick<ClienteNuestro, 'id' | 'nombre'>[]>([]);
   const [availableClientesReparto, setAvailableClientesReparto] = useState<ClientReparto[]>([]);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -108,7 +110,7 @@ export default function DeliveriesPage() {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "detalles_reparto",
-    keyName: "fieldId" 
+    keyName: "fieldId"
   });
 
   const selectedClienteNuestroId = form.watch("cliente_nuestro_id");
@@ -130,13 +132,13 @@ export default function DeliveriesPage() {
 
       if (clientesNuestrosRes.error) throw clientesNuestrosRes.error;
       setClientesNuestros(clientesNuestrosRes.data || []);
-      
-      await fetchDeliveries(); 
-      
+
+      await fetchDeliveries();
+
     } catch (error: any) {
       const userMessage = error?.message || "No se pudieron cargar los datos necesarios. Intente más tarde.";
       toast({ title: "Error al cargar datos iniciales", description: userMessage, variant: "destructive" });
-      
+
       if (error?.message) {
         console.error("Error fetching initial data:", error.message, "Raw error object:", error);
       } else {
@@ -146,7 +148,7 @@ export default function DeliveriesPage() {
       setIsLoading(false);
     }
   };
-  
+
   const fetchDeliveries = async () => {
     try {
         const { data, error } = await supabase.from('repartos')
@@ -155,24 +157,24 @@ export default function DeliveriesPage() {
             fecha,
             repartidor_id,
             zona_id,
-            cliente_nuestro_id, 
+            cliente_nuestro_id,
             tanda,
             estado_entrega,
             created_at,
             updated_at,
             repartidores (nombre),
             zonas (nombre),
-            clientesnuestros (id, nombre), 
+            clientesnuestros (id, nombre),
             detallesreparto (
               id,
               cliente_reparto_id,
               valor_entrega,
               detalle_entrega,
               orden_visita,
-              clientesreparto (nombre, direccion)
+              clientesreparto (id, nombre, direccion)
             )
           `)
-          .order('fecha', { ascending: false }); 
+          .order('fecha', { ascending: false });
 
       if (error) {
         console.error("Supabase error (Repartos):", error);
@@ -183,8 +185,9 @@ export default function DeliveriesPage() {
       if (data) {
         const processedData = data.map(d => ({
           ...d,
-          detalles_reparto: d.detallesreparto 
-            ? (d.detallesreparto as unknown as DetalleReparto[]).sort((a, b) => a.orden_visita - b.orden_visita) 
+          // Make sure detallesreparto exists and is an array before sorting
+          detalles_reparto: d.detallesreparto && Array.isArray(d.detallesreparto)
+            ? (d.detallesreparto as unknown as DetalleReparto[]).sort((a, b) => a.orden_visita - b.orden_visita)
             : [],
         })) as Delivery[];
         setDeliveries(processedData);
@@ -240,7 +243,7 @@ export default function DeliveriesPage() {
         fecha: typeof editingDelivery.fecha === 'string' ? parseISO(editingDelivery.fecha) : editingDelivery.fecha,
         cliente_nuestro_id: editingDelivery.cliente_nuestro_id || null,
         detalles_reparto: editingDelivery.detalles_reparto?.map(d => ({
-          id: d.id, 
+          id: d.id,
           cliente_reparto_id: d.cliente_reparto_id,
           valor_entrega: d.valor_entrega,
           detalle_entrega: d.detalle_entrega,
@@ -260,13 +263,13 @@ export default function DeliveriesPage() {
         estado_entrega: 'pendiente',
         detalles_reparto: [],
       });
-      setAvailableClientesReparto([]); 
+      setAvailableClientesReparto([]);
     }
   }, [editingDelivery, form, isDialogOpen, fetchClientesRepartoForClienteNuestro]);
 
   const onSubmit = async (data: DeliveryFormData) => {
     setIsSubmitting(true);
-    
+
     const repartoData = {
       fecha: format(data.fecha, 'yyyy-MM-dd'),
       repartidor_id: data.repartidor_id,
@@ -279,7 +282,7 @@ export default function DeliveriesPage() {
     try {
       let repartoId = editingDelivery?.id;
 
-      if (editingDelivery) { 
+      if (editingDelivery) {
         const { data: updatedReparto, error: updateError } = await supabase
           .from('repartos')
           .update(repartoData)
@@ -296,7 +299,7 @@ export default function DeliveriesPage() {
           .eq('reparto_id', repartoId);
         if (deleteDetailsError) throw deleteDetailsError;
 
-      } else { 
+      } else {
         const { data: newReparto, error: insertError } = await supabase
           .from('repartos')
           .insert([repartoData])
@@ -313,7 +316,7 @@ export default function DeliveriesPage() {
           cliente_reparto_id: detalle.cliente_reparto_id,
           valor_entrega: detalle.valor_entrega || null,
           detalle_entrega: detalle.detalle_entrega || null,
-          orden_visita: index, 
+          orden_visita: index,
         }));
         const { error: insertDetailsError } = await supabase
           .from('detallesreparto')
@@ -345,10 +348,10 @@ export default function DeliveriesPage() {
         .delete()
         .eq('reparto_id', id);
       if (deleteDetailsError) throw deleteDetailsError;
-      
+
       const { error } = await supabase.from('repartos').delete().eq('id', id);
       if (error) throw error;
-      
+
       fetchDeliveries();
       toast({ title: "Reparto Eliminado", description: "El reparto ha sido eliminado.", variant: "destructive" });
     } catch (error: any) {
@@ -361,7 +364,7 @@ export default function DeliveriesPage() {
       }
     }
   };
-  
+
   const openEditDialog = (delivery: Delivery) => {
     setEditingDelivery(delivery);
     setIsDialogOpen(true);
@@ -440,7 +443,7 @@ export default function DeliveriesPage() {
                   <TableCell>{delivery.tanda}</TableCell>
                   <TableCell>{delivery.detalles_reparto?.length || 0}</TableCell>
                   <TableCell>
-                    <Badge 
+                    <Badge
                         variant={delivery.estado_entrega === 'entregado' ? 'default' : (delivery.estado_entrega === 'en curso' ? 'secondary' : 'outline')}
                         className={cn(
                             {'bg-green-500 text-primary-foreground': delivery.estado_entrega === 'entregado'},
@@ -477,7 +480,7 @@ export default function DeliveriesPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"> 
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDelivery ? 'Editar' : 'Nuevo'} Reparto</DialogTitle>
           </DialogHeader>
@@ -530,7 +533,7 @@ export default function DeliveriesPage() {
                   )}
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                     control={form.control}
@@ -538,17 +541,17 @@ export default function DeliveriesPage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Cliente Principal</FormLabel>
-                        <Select 
+                        <Select
                             onValueChange={(value) => {
-                                field.onChange(value);
-                                form.setValue('detalles_reparto', []); 
-                            }} 
-                            value={field.value || ""} 
+                                field.onChange(value === NULL_VALUE_PLACEHOLDER ? null : value);
+                                form.setValue('detalles_reparto', []);
+                            }}
+                            value={field.value || NULL_VALUE_PLACEHOLDER}
                             disabled={isSubmitting}
                         >
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar cliente principal" /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="">Sin cliente principal</SelectItem>
+                          <SelectItem value={NULL_VALUE_PLACEHOLDER}>Sin cliente principal</SelectItem>
                             {clientesNuestros.map((cliente) => (
                             <SelectItem key={cliente.id} value={cliente.id}>{cliente.nombre}</SelectItem>
                             ))}
@@ -593,7 +596,7 @@ export default function DeliveriesPage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Estado de Entrega</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value as string} disabled={isSubmitting}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value as DeliveryStatusValue} disabled={isSubmitting}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger></FormControl>
                         <SelectContent>
                             {ALL_DELIVERY_STATUSES.map((statusValue) => (
@@ -605,7 +608,7 @@ export default function DeliveriesPage() {
                     </FormItem>
                     )}
                 />
-              
+
               <Card className="mt-6">
                 <CardHeader>
                   <div className="flex justify-between items-center">
@@ -631,9 +634,9 @@ export default function DeliveriesPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Cliente de Reparto</FormLabel>
-                            <Select 
-                              onValueChange={(value) => field.onChange(parseInt(value,10))} 
-                              value={field.value?.toString()} 
+                            <Select
+                              onValueChange={(value) => field.onChange(parseInt(value,10))}
+                              value={field.value?.toString()}
                               disabled={isSubmitting || availableClientesReparto.length === 0}
                             >
                               <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar cliente de reparto" /></SelectTrigger></FormControl>
@@ -674,7 +677,7 @@ export default function DeliveriesPage() {
                        <FormField
                         control={form.control}
                         name={`detalles_reparto.${index}.orden_visita`}
-                        render={({ field }) => <Input type="hidden" {...field} value={index} />} 
+                        render={({ field }) => <Input type="hidden" {...field} value={index} />}
                       />
                     </div>
                   ))}
@@ -701,4 +704,5 @@ export default function DeliveriesPage() {
     </>
   );
 }
-    
+
+
