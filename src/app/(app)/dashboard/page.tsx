@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -87,12 +88,12 @@ export default function DashboardPage() {
         if (entregasPendientesHoyRes.error) throw entregasPendientesHoyRes.error;
 
         setOperationalStatus({
-          repartosEnCurso: repartosEnCursoRes.data?.length || 0,
-          repartidoresActivos: repartidoresActivosRes.data?.length || 0,
-          totalRepartidores: totalRepartidoresRes.data?.length || 0,
-          alertasSistema: alertasSistemaRes.data?.length || 0,
-          repartosProgramadosHoy: repartosProgramadosHoyRes.data?.length || 0,
-          entregasPendientesHoy: entregasPendientesHoyRes.data?.length || 0,
+          repartosEnCurso: repartosEnCursoRes.count || 0, // Use count from Supabase response
+          repartidoresActivos: repartidoresActivosRes.count || 0,
+          totalRepartidores: totalRepartidoresRes.count || 0,
+          alertasSistema: alertasSistemaRes.count || 0,
+          repartosProgramadosHoy: repartosProgramadosHoyRes.count || 0,
+          entregasPendientesHoy: entregasPendientesHoyRes.count || 0,
         });
 
       } catch (error) {
@@ -138,7 +139,7 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="container mx-auto py-2">
+    <div className="container mx-auto py-2 overflow-auto"> {/* Added overflow-auto */}
       <PageHeader
         title="Dashboard General del Día"
         description="Resumen de la operación y accesos directos para Viandas Express Admin."
@@ -153,7 +154,7 @@ export default function DashboardPage() {
                 <CardTitle className={`text-sm font-medium ${card.variant === 'destructive' ? 'text-destructive' : 'text-primary'}`}>
                   {card.title}
                 </CardTitle>
-                <card.icon className={`h-5 w-5 ${card.variant === 'destructive' ? 'text-destructive' : 'text-muted-foreground'}`} />
+                <card.icon className={`h-5 w-5 ${card.variant === 'destructive' ? 'text-destructive' : 'text-muted-foreground'}`} aria-hidden="true" />
               </CardHeader>
               <CardContent>
                 {isLoadingStatus ? (
@@ -177,28 +178,28 @@ export default function DashboardPage() {
               <CardTitle className="text-xl text-primary">Acciones Rápidas</CardTitle>
               <CardDescription>Tareas comunes a un clic.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-3">
+            <CardContent className="flex flex-col gap-3"> {/* Changed to flex flex-col for better stacking */}
               <Button asChild variant="outline" className="w-full justify-start hover:bg-secondary/20">
                 <Link href="/deliveries">
-                  <ClipboardList className="mr-2 h-4 w-4 text-accent" />
+                  <ClipboardList className="mr-2 h-4 w-4 text-accent" aria-hidden="true" />
                   Ver Repartos de Hoy
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start hover:bg-secondary/20">
                 <Link href="/deliveries">
-                  <Truck className="mr-2 h-4 w-4 text-accent" />
+                  <Truck className="mr-2 h-4 w-4 text-accent" aria-hidden="true" />
                   Nuevo Reparto
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start hover:bg-secondary/20">
                 <Link href="/optimize-route">
-                  <RouteIcon className="mr-2 h-4 w-4 text-accent" />
+                  <RouteIcon className="mr-2 h-4 w-4 text-accent" aria-hidden="true" />
                   Optimizar Ruta
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start hover:bg-secondary/20">
                 <Link href="/clients">
-                  <Users className="mr-2 h-4 w-4 text-accent" />
+                  <Users className="mr-2 h-4 w-4 text-accent" aria-hidden="true" />
                   Registrar Cliente
                 </Link>
               </Button>
@@ -215,7 +216,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-sm font-medium text-primary">
                     {card.title}
                 </CardTitle>
-                <card.icon className="h-5 w-5 text-muted-foreground" />
+                <card.icon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 </CardHeader>
                 <CardContent>
                 <div className="text-2xl font-bold text-foreground">{card.value}</div>

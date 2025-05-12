@@ -5,16 +5,17 @@ import React, { useState }from 'react';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+// Removed Textarea import as it's not used directly
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { optimizeRouteAction } from './actions';
-import { OptimizeRouteFormSchema, OptimizeRouteFormValues } from './optimize-route.schema'; 
+import { OptimizeRouteFormSchema, type OptimizeRouteFormValues } from './optimize-route.schema'; 
 import type { OptimizeDeliveryRouteOutput } from '@/ai/flows/optimize-delivery-route'; 
 import { Loader2, PlusCircle, Trash2, RouteIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; // Added Table imports
 
 export default function OptimizeRoutePage() {
   const [optimizationResult, setOptimizationResult] = useState<OptimizeDeliveryRouteOutput | null>(null);
@@ -50,10 +51,14 @@ export default function OptimizeRoutePage() {
       if (typeof result.error === 'string') {
         errorMessage = result.error;
       } else if (result.error && 'fieldErrors' in result.error) {
-        const fieldErrors = Object.values(result.error.fieldErrors).flat().join(' ');
-        if (fieldErrors) errorMessage = `Errores de validación: ${fieldErrors}`;
-        const formErrors = result.error.formErrors.join(' ');
-         if (formErrors) errorMessage += ` ${formErrors}`;
+        // Ensure fieldErrors is an object before trying to access its values
+        const fieldErrorsString = typeof result.error.fieldErrors === 'object' 
+          ? Object.values(result.error.fieldErrors).flat().join(' ') 
+          : '';
+        if (fieldErrorsString) errorMessage = `Errores de validación: ${fieldErrorsString}`;
+        
+        const formErrorsString = Array.isArray(result.error.formErrors) ? result.error.formErrors.join(' ') : '';
+        if (formErrorsString) errorMessage += ` ${formErrorsString}`;
       }
       toast({ title: "Error de Optimización", description: errorMessage, variant: "destructive" });
     }
@@ -82,7 +87,7 @@ export default function OptimizeRoutePage() {
                     <FormField
                       control={form.control}
                       name={`stops.${index}.address`}
-                      render={({ field: formField }) => ( // Renamed field to avoid conflict
+                      render={({ field: formField }) => ( 
                         <FormItem className="flex-grow w-full sm:w-auto">
                            {index === 0 && <FormLabel className="text-xs">Dirección</FormLabel>}
                           <FormControl>
@@ -95,7 +100,7 @@ export default function OptimizeRoutePage() {
                     <FormField
                       control={form.control}
                       name={`stops.${index}.priority`}
-                      render={({ field: formField }) => ( // Renamed field to avoid conflict
+                      render={({ field: formField }) => ( 
                         <FormItem className="w-full sm:w-24">
                            {index === 0 && <FormLabel className="text-xs">Prioridad</FormLabel>}
                           <FormControl>
@@ -105,9 +110,9 @@ export default function OptimizeRoutePage() {
                         </FormItem>
                       )}
                     />
-                    <div className="self-start sm:self-end">
+                    <div className="self-start sm:self-end pt-1 sm:pt-0"> {/* Adjusted padding for alignment */}
                       {fields.length > 1 && (
-                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
+                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} aria-label={`Eliminar parada ${index + 1}`}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
@@ -198,15 +203,28 @@ export default function OptimizeRoutePage() {
           <CardContent className="space-y-4">
             <div>
               <h3 className="font-semibold text-lg">Ruta Optimizada:</h3>
-              <ul className="list-decimal list-inside mt-2 space-y-1 bg-muted p-4 rounded-md">
-                {optimizationResult.optimizedRoute.map((stop, index) => (
-                  <li key={index} className="text-sm">
-                    <span className="font-medium">{stop.address}</span> (Prioridad: {stop.priority})
-                  </li>
-                ))}
-              </ul>
+              <div className="relative w-full overflow-auto mt-2">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">#</TableHead>
+                      <TableHead>Dirección</TableHead>
+                      <TableHead className="text-right">Prioridad</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {optimizationResult.optimizedRoute.map((stop, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="font-medium">{stop.address}</TableCell>
+                        <TableCell className="text-right">{stop.priority}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                 <p className="text-sm"><strong className="font-medium">Tiempo Estimado de Viaje:</strong> {optimizationResult.estimatedTravelTime}</p>
                 <p className="text-sm"><strong className="font-medium">Distancia Estimada de Viaje:</strong> {optimizationResult.estimatedTravelDistance}</p>
             </div>

@@ -157,37 +157,39 @@ export default function ZonesPage() {
               ))}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nombre de la Zona</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {zones.map((zone) => (
-                  <TableRow key={zone.id}>
-                    <TableCell className="font-mono text-xs">{zone.id}</TableCell>
-                    <TableCell className="font-medium">{zone.nombre}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(zone)} disabled={isSubmitting}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(zone.id)} disabled={isSubmitting}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
+            <div className="relative w-full overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Nombre de la Zona</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {zones.map((zone) => (
+                    <TableRow key={zone.id}>
+                      <TableCell className="font-mono text-xs">{zone.id}</TableCell>
+                      <TableCell className="font-medium">{zone.nombre}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(zone)} disabled={isSubmitting}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(zone.id)} disabled={isSubmitting}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[90vw] sm:max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingZone ? 'Editar' : 'Nueva'} Zona</DialogTitle>
           </DialogHeader>
@@ -222,3 +224,4 @@ export default function ZonesPage() {
     </>
   );
 }
+

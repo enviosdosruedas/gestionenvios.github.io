@@ -40,7 +40,7 @@ export default function ClientesRepartoPage() {
     setIsLoading(true);
     try {
       const [clientsRepartoRes, clientesNuestrosRes] = await Promise.all([
-        supabase.from('clientesreparto') // Corrected table name
+        supabase.from('clientesreparto') 
           .select(`
             id,
             nombre,
@@ -158,47 +158,49 @@ export default function ClientesRepartoPage() {
               ))}
             </div>
           ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Dirección</TableHead>
-                <TableHead>Cliente Principal</TableHead>
-                <TableHead>Tipo Reparto</TableHead>
-                <TableHead>Días Específicos</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clientsReparto.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell className="font-medium">{client.nombre}</TableCell>
-                  <TableCell>{client.direccion}</TableCell>
-                  <TableCell>{client.clientesnuestros?.nombre || 'N/A'}</TableCell>
-                  <TableCell>{client.tipo_reparto ? client.tipo_reparto.charAt(0).toUpperCase() + client.tipo_reparto.slice(1) : '-'}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {client.dias_especificos?.map(d => <Badge key={d} variant="outline">{d.charAt(0).toUpperCase() + d.slice(1)}</Badge>) || '-'}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(client)} disabled={isSubmitting}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)} disabled={isSubmitting}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
+          <div className="relative w-full overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Dirección</TableHead>
+                  <TableHead>Cliente Principal</TableHead>
+                  <TableHead>Tipo Reparto</TableHead>
+                  <TableHead>Días Específicos</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {clientsReparto.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">{client.nombre}</TableCell>
+                    <TableCell>{client.direccion}</TableCell>
+                    <TableCell>{client.clientesnuestros?.nombre || 'N/A'}</TableCell>
+                    <TableCell>{client.tipo_reparto ? client.tipo_reparto.charAt(0).toUpperCase() + client.tipo_reparto.slice(1) : '-'}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {client.dias_especificos?.map(d => <Badge key={d} variant="outline">{d.charAt(0).toUpperCase() + d.slice(1)}</Badge>) || '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(client)} disabled={isSubmitting}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)} disabled={isSubmitting}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open); }}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[90vw] sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingClientReparto ? 'Editar' : 'Nuevo'} Cliente de Reparto</DialogTitle>
           </DialogHeader>
@@ -214,3 +216,4 @@ export default function ClientesRepartoPage() {
     </>
   );
 }
+

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -23,7 +24,7 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-full justify-start gap-2 px-2">
            <Avatar className="h-8 w-8">
-            <AvatarImage src="https://picsum.photos/100/100?grayscale" alt="@shadcn" data-ai-hint="abstract user" />
+            <AvatarImage src="https://picsum.photos/100/100?grayscale" alt={`${user.name}'s avatar`} data-ai-hint="abstract user" />
             <AvatarFallback>
               {user.name
                 .split(" ")
@@ -64,3 +65,4 @@ export function UserNav() {
     </DropdownMenu>
   )
 }
+

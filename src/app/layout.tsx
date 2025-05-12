@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 const APP_NAME = "Viandas Express Admin";
 const APP_DESCRIPTION = "Gestión de operaciones de entrega y optimización de rutas para Viandas Express en Mar del Plata, Argentina.";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"; // Fallback for local dev
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://gestionenviospruebas.netlify.app"; 
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
@@ -34,8 +34,8 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  manifest: "/manifest.json",
-  robots: {
+  manifest: "/manifest.json", // Ensure this file exists in /public
+  robots: { // Corrected directives
     index: true,
     follow: true,
     googleBot: {
@@ -48,8 +48,8 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: '/',
-    languages: {
-      'es-AR': '/es-AR', // Example, adjust if you have other languages
+    languages: { // Example, assuming Spanish (Argentina) is primary
+      'es-AR': '/es-AR', // If you have a dedicated Spanish version at this path
     },
   },
   openGraph: {
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: `${APP_URL}/og-image.png`, // Replace with your actual OG image URL
+        url: `/og-image.png`, // Assumes og-image.png is in /public
         width: 1200,
         height: 630,
         alt: `Logo de ${APP_NAME}`,
@@ -72,26 +72,24 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: APP_NAME,
     description: APP_DESCRIPTION,
-    images: [`${APP_URL}/twitter-image.png`], // Replace with your actual Twitter image URL
-    // creator: '@yourtwitterhandle', // Add if you have a Twitter handle
+    images: [`/twitter-image.png`], // Assumes twitter-image.png is in /public
+    // creator: '@yourtwitterhandle', // Uncomment if you have a Twitter handle
   },
-  // Favicons are typically handled by placing files in the /app directory (favicon.ico, apple-touch-icon.png, etc.)
-  // Or you can specify them here if needed:
-  // icons: {
-  //   icon: '/favicon.ico',
-  //   shortcut: '/favicon-16x16.png',
-  //   apple: '/apple-touch-icon.png',
-  // },
+  icons: { // Standard way to declare favicons
+    icon: '/favicon.ico',
+    shortcut: '/favicon.svg', // or /favicon-16x16.png etc.
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, // Optional: consider if zooming is desired
-  // userScalable: false, // Optional: consider if user scaling should be disabled
+  maximumScale: 1, 
+  // userScalable: false, // Generally better to allow user scaling for accessibility
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#00296B' }, // Royal Blue for light scheme
-    { media: '(prefers-color-scheme: dark)', color: '#00102b' },  // Darker Royal Blue for dark scheme
+    { media: '(prefers-color-scheme: light)', color: '#00296B' }, 
+    { media: '(prefers-color-scheme: dark)', color: '#00102b' },  
   ],
 };
 
@@ -102,14 +100,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning> {/* suppressHydrationWarning on html is often sufficient */}
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {/* 
-          The main H1 tag should be on individual pages to describe their specific content.
-          The layout provides the overall structure.
-          Semantic elements like <header>, <nav>, <main>, <footer> should be used within page components
-          and the (app) layout.tsx as appropriate.
-        */}
         {children}
         <Toaster />
       </body>

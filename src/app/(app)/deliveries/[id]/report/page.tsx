@@ -37,7 +37,7 @@ export default function DeliveryReportPage() {
     if (deliveryId) {
       const fetchReportData = async () => {
         setIsLoading(true);
-        setReportData(null); // Reset report data before fetching
+        setReportData(null); 
         try {
           const { data, error } = await supabase
             .from('repartos')
@@ -65,7 +65,7 @@ export default function DeliveryReportPage() {
 
           if (error) {
             console.error("Supabase error fetching report data:", error);
-            throw error; // Re-throw to be caught by the outer try-catch
+            throw error; 
           }
           
           if (!data) {
@@ -73,11 +73,9 @@ export default function DeliveryReportPage() {
             throw new Error(`No se encontraron datos para el reparto ID ${deliveryId}.`);
           }
           
-          // Ensure detallesreparto is an array before sorting
           const detalles = Array.isArray(data.detallesreparto) ? data.detallesreparto : [];
           const sortedData = {
             ...data,
-            // Ensure fecha is a string before attempting parseISO
             fecha: typeof data.fecha === 'string' ? data.fecha : new Date(data.fecha).toISOString(),
             detallesreparto: [...detalles].sort((a,b) => a.orden_visita - b.orden_visita),
           } as ReportData;
@@ -159,7 +157,7 @@ export default function DeliveryReportPage() {
           title={`Reporte del Reparto #${reportData.id.substring(0, 8)}...`}
           description={`Detalles del reparto del ${formatDateSafe(reportData.fecha)}`}
           actions={
-            <div className="flex gap-2 print:hidden page-header-actions-print-hide">
+            <div className="flex flex-wrap gap-2 print:hidden page-header-actions-print-hide">
               <Button variant="outline" asChild>
                 <Link href="/deliveries">
                   <ArrowLeft className="mr-2 h-4 w-4" /> Volver
@@ -195,44 +193,46 @@ export default function DeliveryReportPage() {
           <CardDescription>Listado de todos los ítems de entrega en el orden de visita.</CardDescription>
         </CardHeader>
         <CardContent className="p-0 print:p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">#</TableHead>
-                <TableHead>Cliente Destino</TableHead>
-                <TableHead>Dirección</TableHead>
-                <TableHead>Horario</TableHead>
-                <TableHead>Restricciones</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead>Notas Entrega</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reportData.detallesreparto.length > 0 ? (
-                reportData.detallesreparto.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.orden_visita + 1}</TableCell>
-                    <TableCell>{item.clientesreparto?.nombre || 'N/A'}</TableCell>
-                    <TableCell>{item.clientesreparto?.direccion || 'N/A'}</TableCell>
-                    <TableCell>
-                      {item.clientesreparto?.horario_inicio && item.clientesreparto?.horario_fin 
-                        ? `${item.clientesreparto.horario_inicio} - ${item.clientesreparto.horario_fin}`
-                        : item.clientesreparto?.horario_inicio || item.clientesreparto?.horario_fin || '-' }
-                    </TableCell>
-                    <TableCell>{item.clientesreparto?.restricciones || '-'}</TableCell>
-                    <TableCell className="text-right">
-                      {item.valor_entrega != null ? `$${Number(item.valor_entrega).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
-                    </TableCell>
-                    <TableCell>{item.detalle_entrega || '-'}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
+          <div className="relative w-full overflow-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">No hay ítems de entrega para este reparto.</TableCell>
+                  <TableHead className="w-[50px]">#</TableHead>
+                  <TableHead>Cliente Destino</TableHead>
+                  <TableHead>Dirección</TableHead>
+                  <TableHead>Horario</TableHead>
+                  <TableHead>Restricciones</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead>Notas Entrega</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {reportData.detallesreparto.length > 0 ? (
+                  reportData.detallesreparto.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.orden_visita + 1}</TableCell>
+                      <TableCell>{item.clientesreparto?.nombre || 'N/A'}</TableCell>
+                      <TableCell>{item.clientesreparto?.direccion || 'N/A'}</TableCell>
+                      <TableCell>
+                        {item.clientesreparto?.horario_inicio && item.clientesreparto?.horario_fin 
+                          ? `${item.clientesreparto.horario_inicio} - ${item.clientesreparto.horario_fin}`
+                          : item.clientesreparto?.horario_inicio || item.clientesreparto?.horario_fin || '-' }
+                      </TableCell>
+                      <TableCell>{item.clientesreparto?.restricciones || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        {item.valor_entrega != null ? `$${Number(item.valor_entrega).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                      </TableCell>
+                      <TableCell>{item.detalle_entrega || '-'}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">No hay ítems de entrega para este reparto.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

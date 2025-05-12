@@ -226,53 +226,55 @@ export default function ClientsPage() {
               ))}
             </div>
           ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Dirección Retiro</TableHead>
-                <TableHead>Servicios</TableHead>
-                <TableHead>Días de Reparto</TableHead>
-                <TableHead>Zona</TableHead>
-                <TableHead>Otros Detalles</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clients.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell className="font-medium">{client.nombre}</TableCell>
-                  <TableCell>{client.direccion_retiro || '-'}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {client.servicios.map(s => <Badge key={s} variant="secondary">{s}</Badge>)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                     <div className="flex flex-wrap gap-1">
-                        {client.dias_de_reparto.map(d => <Badge key={d} variant="outline">{d.charAt(0).toUpperCase() + d.slice(1)}</Badge>)}
-                     </div>
-                  </TableCell>
-                  <TableCell>{client.zonas?.nombre || 'N/A'}</TableCell>
-                  <TableCell>{client.otros_detalles || '-'}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(client)} disabled={isSubmitting}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)} disabled={isSubmitting}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
+          <div className="relative w-full overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Dirección Retiro</TableHead>
+                  <TableHead>Servicios</TableHead>
+                  <TableHead>Días de Reparto</TableHead>
+                  <TableHead>Zona</TableHead>
+                  <TableHead>Otros Detalles</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {clients.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">{client.nombre}</TableCell>
+                    <TableCell>{client.direccion_retiro || '-'}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {client.servicios.map(s => <Badge key={s} variant="secondary">{s}</Badge>)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                       <div className="flex flex-wrap gap-1">
+                          {client.dias_de_reparto.map(d => <Badge key={d} variant="outline">{d.charAt(0).toUpperCase() + d.slice(1)}</Badge>)}
+                       </div>
+                    </TableCell>
+                    <TableCell>{client.zonas?.nombre || 'N/A'}</TableCell>
+                    <TableCell>{client.otros_detalles || '-'}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(client)} disabled={isSubmitting}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)} disabled={isSubmitting}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+           </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[90vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingClient ? 'Editar' : 'Nuevo'} Cliente</DialogTitle>
           </DialogHeader>
@@ -311,7 +313,7 @@ export default function ClientsPage() {
                 render={() => (
                   <FormItem>
                     <FormLabel>Servicios Contratados</FormLabel>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {ALL_SERVICES.map((service) => (
                       <FormField
                         key={service}
@@ -354,7 +356,7 @@ export default function ClientsPage() {
                 render={() => (
                   <FormItem>
                     <FormLabel>Días de Reparto Asignados</FormLabel>
-                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {ALL_DAYS.map((day) => (
                       <FormField
                         key={day}
@@ -446,3 +448,4 @@ export default function ClientsPage() {
     </>
   );
 }
+

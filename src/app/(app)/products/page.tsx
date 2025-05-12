@@ -199,52 +199,54 @@ export default function ProductsPage() {
               ))}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Precio</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.nombre}</TableCell>
-                    <TableCell>{product.categoria || '-'}</TableCell>
-                    <TableCell>${product.precio.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge 
-                          variant={product.estado === 'disponible' ? 'default' : (product.estado === 'agotado' ? 'destructive' : 'secondary')}
-                          className={cn(
-                              {'bg-green-500 text-primary-foreground': product.estado === 'disponible'},
-                              {'bg-orange-500 text-primary-foreground': product.estado === 'agotado'},
-                              {'bg-gray-500 text-primary-foreground': product.estado === 'descontinuado'}
-                          )}
-                      >
-                        {product.estado.charAt(0).toUpperCase() + product.estado.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)} disabled={isSubmitting}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)} disabled={isSubmitting}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
+            <div className="relative w-full overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead>Precio</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {products.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.nombre}</TableCell>
+                      <TableCell>{product.categoria || '-'}</TableCell>
+                      <TableCell>${product.precio.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge 
+                            variant={product.estado === 'disponible' ? 'default' : (product.estado === 'agotado' ? 'destructive' : 'secondary')}
+                            className={cn(
+                                {'bg-green-500 text-primary-foreground': product.estado === 'disponible'},
+                                {'bg-orange-500 text-primary-foreground': product.estado === 'agotado'},
+                                {'bg-gray-500 text-primary-foreground': product.estado === 'descontinuado'}
+                            )}
+                        >
+                          {product.estado.charAt(0).toUpperCase() + product.estado.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)} disabled={isSubmitting}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)} disabled={isSubmitting}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
-        <DialogContent className="sm:max-w-[525px]">
+        <DialogContent className="w-[90vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingProduct ? 'Editar' : 'Nuevo'} Producto</DialogTitle>
           </DialogHeader>
@@ -344,3 +346,4 @@ export default function ProductsPage() {
     </>
   );
 }
+

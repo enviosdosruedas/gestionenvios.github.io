@@ -22,7 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
-import type { Delivery, Driver, Zone, ClienteNuestro, ClientReparto, DetalleReparto, DeliveryStatusValue } from '@/lib/types';
+import type { Delivery, Driver, Zone, ClienteNuestro, ClientReparto, DetalleReparto, DeliveryStatus } from '@/lib/types'; // Changed DeliveryStatusValue to DeliveryStatus
 import { ALL_DELIVERY_STATUSES } from '@/lib/types';
 import { z } from 'zod';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -158,13 +158,13 @@ export default function DeliveriesPage() {
             repartidor_id,
             zona_id,
             cliente_nuestro_id,
+            clientesnuestros!inner (id, nombre), 
             tanda,
             estado_entrega,
             created_at,
             updated_at,
             repartidores (nombre),
             zonas (nombre),
-            clientesnuestros (id, nombre),
             detallesreparto (
               id,
               cliente_reparto_id,
@@ -185,7 +185,7 @@ export default function DeliveriesPage() {
       if (data) {
         const processedData = data.map(d => ({
           ...d,
-          // Make sure detallesreparto exists and is an array before sorting
+          clientesnuestros: d.clientesnuestros, // This should now be correctly populated
           detalles_reparto: d.detallesreparto && Array.isArray(d.detallesreparto)
             ? (d.detallesreparto as unknown as DetalleReparto[]).sort((a, b) => a.orden_visita - b.orden_visita)
             : [],
@@ -316,7 +316,7 @@ export default function DeliveriesPage() {
           cliente_reparto_id: detalle.cliente_reparto_id,
           valor_entrega: detalle.valor_entrega || null,
           detalle_entrega: detalle.detalle_entrega || null,
-          orden_visita: index, // Ensure orden_visita is set sequentially from the form's array index
+          orden_visita: index, 
         }));
         const { error: insertDetailsError } = await supabase
           .from('detallesreparto')
@@ -419,68 +419,70 @@ export default function DeliveriesPage() {
               ))}
             </div>
           ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Repartidor</TableHead>
-                <TableHead>Cliente Principal</TableHead>
-                <TableHead>Zona</TableHead>
-                <TableHead>Tanda</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Reporte</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {deliveries.map((delivery) => (
-                <TableRow key={delivery.id}>
-                  <TableCell>{format(typeof delivery.fecha === 'string' ? parseISO(delivery.fecha) : delivery.fecha, 'PPP', { locale: es })}</TableCell>
-                  <TableCell>{delivery.repartidores?.nombre || 'N/A'}</TableCell>
-                  <TableCell>{delivery.clientesnuestros?.nombre || 'N/A'}</TableCell>
-                  <TableCell>{delivery.zonas?.nombre || 'N/A'}</TableCell>
-                  <TableCell>{delivery.tanda}</TableCell>
-                  <TableCell>{delivery.detalles_reparto?.length || 0}</TableCell>
-                  <TableCell>
-                    <Badge
-                        variant={delivery.estado_entrega === 'entregado' ? 'default' : (delivery.estado_entrega === 'en curso' ? 'secondary' : 'outline')}
-                        className={cn(
-                            {'bg-green-500 text-primary-foreground': delivery.estado_entrega === 'entregado'},
-                            {'bg-polynesian-blue-500 text-primary-foreground': delivery.estado_entrega === 'en curso'},
-                            {'bg-mikado-yellow-500 text-secondary-foreground': delivery.estado_entrega === 'pendiente'},
-                            {'bg-red-500 text-destructive-foreground': delivery.estado_entrega === 'cancelado'},
-                            {'bg-purple-500 text-primary-foreground': delivery.estado_entrega === 'reprogramado'}
-                        )}
-                    >
-                      {delivery.estado_entrega.charAt(0).toUpperCase() + delivery.estado_entrega.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Link href={`/deliveries/${delivery.id}/report`} passHref legacyBehavior>
-                      <Button variant="outline" size="icon" aria-label="Ver Reporte">
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(delivery)} disabled={isSubmitting} aria-label="Editar Reparto">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(delivery.id)} disabled={isSubmitting} aria-label="Eliminar Reparto">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
+          <div className="relative w-full overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Repartidor</TableHead>
+                  <TableHead>Cliente Principal</TableHead>
+                  <TableHead>Zona</TableHead>
+                  <TableHead>Tanda</TableHead>
+                  <TableHead>Items</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Reporte</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {deliveries.map((delivery) => (
+                  <TableRow key={delivery.id}>
+                    <TableCell>{format(typeof delivery.fecha === 'string' ? parseISO(delivery.fecha) : delivery.fecha, 'PPP', { locale: es })}</TableCell>
+                    <TableCell>{delivery.repartidores?.nombre || 'N/A'}</TableCell>
+                    <TableCell>{(delivery.clientesnuestros as ClienteNuestro | undefined)?.nombre || 'N/A'}</TableCell>
+                    <TableCell>{delivery.zonas?.nombre || 'N/A'}</TableCell>
+                    <TableCell>{delivery.tanda}</TableCell>
+                    <TableCell>{delivery.detalles_reparto?.length || 0}</TableCell>
+                    <TableCell>
+                      <Badge
+                          variant={delivery.estado_entrega === 'entregado' ? 'default' : (delivery.estado_entrega === 'en curso' ? 'secondary' : 'outline')}
+                          className={cn(
+                              {'bg-green-500 text-primary-foreground': delivery.estado_entrega === 'entregado'},
+                              {'bg-polynesian-blue-500 text-primary-foreground': delivery.estado_entrega === 'en curso'},
+                              {'bg-mikado-yellow-500 text-secondary-foreground': delivery.estado_entrega === 'pendiente'},
+                              {'bg-red-500 text-destructive-foreground': delivery.estado_entrega === 'cancelado'},
+                              {'bg-purple-500 text-primary-foreground': delivery.estado_entrega === 'reprogramado'}
+                          )}
+                      >
+                        {delivery.estado_entrega.charAt(0).toUpperCase() + delivery.estado_entrega.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Link href={`/deliveries/${delivery.id}/report`} passHref legacyBehavior>
+                        <Button variant="outline" size="icon" aria-label="Ver Reporte">
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(delivery)} disabled={isSubmitting} aria-label="Editar Reparto">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(delivery.id)} disabled={isSubmitting} aria-label="Eliminar Reparto">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
-        <DialogContent className="w-[90vw] max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[90vw] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDelivery ? 'Editar' : 'Nuevo'} Reparto</DialogTitle>
           </DialogHeader>
@@ -596,11 +598,11 @@ export default function DeliveriesPage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Estado de Entrega</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value as DeliveryStatusValue} disabled={isSubmitting}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value as DeliveryStatus} disabled={isSubmitting}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger></FormControl>
                         <SelectContent>
                             {ALL_DELIVERY_STATUSES.map((statusValue) => (
-                            <SelectItem key={statusValue} value={statusValue}> {typeof statusValue === 'string' ? statusValue.charAt(0).toUpperCase() + statusValue.slice(1) : statusValue}</SelectItem>
+                            <SelectItem key={statusValue} value={statusValue}> {statusValue.charAt(0).toUpperCase() + statusValue.slice(1)}</SelectItem>
                             ))}
                         </SelectContent>
                         </Select>
@@ -704,3 +706,4 @@ export default function DeliveriesPage() {
     </>
   );
 }
+

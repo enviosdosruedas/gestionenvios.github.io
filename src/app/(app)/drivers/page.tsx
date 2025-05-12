@@ -93,6 +93,7 @@ export default function DriversPage() {
       const userMessage = error?.message || "No se pudieron cargar los repartidores. Intente más tarde.";
       toast({ title: "Error al cargar repartidores", description: userMessage, variant: "destructive" });
 
+      // Improved console logging
       if (error?.message) {
         console.error("Error fetching drivers:", error.message, "Raw error object:", error);
       } else {
@@ -223,55 +224,57 @@ export default function DriversPage() {
               ))}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Identificación</TableHead>
-                  <TableHead>Contacto</TableHead>
-                  <TableHead>Vehículo</TableHead>
-                  <TableHead>Patente</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {drivers.map((driver) => (
-                  <TableRow key={driver.id}>
-                    <TableCell className="font-medium">{driver.nombre}</TableCell>
-                    <TableCell>{driver.identificacion || '-'}</TableCell>
-                    <TableCell>{driver.contacto || '-'}</TableCell>
-                    <TableCell>{driver.tipo_vehiculo || '-'}</TableCell>
-                    <TableCell>{driver.patente || '-'}</TableCell>
-                    <TableCell>
-                      <Badge 
-                          variant={driver.status === 'activo' ? 'default' : 'secondary'} 
-                          className={cn(
-                              {'bg-green-500 text-primary-foreground': driver.status === 'activo'},
-                              {'bg-red-500 text-destructive-foreground': driver.status === 'inactivo'}
-                          )}
-                      >
-                        {driver.status.charAt(0).toUpperCase() + driver.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(driver)} disabled={isSubmitting}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(driver.id)} disabled={isSubmitting}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
+            <div className="relative w-full overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Identificación</TableHead>
+                    <TableHead>Contacto</TableHead>
+                    <TableHead>Vehículo</TableHead>
+                    <TableHead>Patente</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {drivers.map((driver) => (
+                    <TableRow key={driver.id}>
+                      <TableCell className="font-medium">{driver.nombre}</TableCell>
+                      <TableCell>{driver.identificacion || '-'}</TableCell>
+                      <TableCell>{driver.contacto || '-'}</TableCell>
+                      <TableCell>{driver.tipo_vehiculo || '-'}</TableCell>
+                      <TableCell>{driver.patente || '-'}</TableCell>
+                      <TableCell>
+                        <Badge 
+                            variant={driver.status === 'activo' ? 'default' : 'secondary'} 
+                            className={cn(
+                                {'bg-green-500 text-primary-foreground': driver.status === 'activo'},
+                                {'bg-red-500 text-destructive-foreground': driver.status === 'inactivo'}
+                            )}
+                        >
+                          {driver.status.charAt(0).toUpperCase() + driver.status.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(driver)} disabled={isSubmitting}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(driver.id)} disabled={isSubmitting}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
-        <DialogContent className="sm:max-w-[525px]">
+        <DialogContent className="w-[90vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDriver ? 'Editar' : 'Nuevo'} Repartidor</DialogTitle>
           </DialogHeader>
@@ -386,3 +389,4 @@ export default function DriversPage() {
     </>
   );
 }
+
