@@ -13,6 +13,7 @@ La aplicación se desarrolla utilizando tecnologías modernas como Next.js, Reac
 *   **Mejorar la Eficiencia Operativa:** Reducir tiempos y costos asociados a la planificación y ejecución de las entregas.
 *   **Facilitar la Toma de Decisiones:** Ofrecer una visión clara del estado de las operaciones a través de un dashboard y reportes (funcionalidad futura).
 *   **Proveer una Interfaz Intuitiva:** Asegurar que la aplicación sea fácil de usar, moderna y accesible desde diferentes dispositivos (responsive design).
+*   Mejorar la responsividad general de la aplicación para asegurar una experiencia de usuario óptima en cualquier dispositivo.
 
 ## 3. Arquitectura y Tecnologías
 
