@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabaseClient';
 import type { Delivery, DetalleReparto } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Printer, ArrowLeft } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,6 +37,7 @@ export default function DeliveryReportPage() {
     if (deliveryId) {
       const fetchReportData = async () => {
         setIsLoading(true);
+        setReportData(null); // Reset report data before fetching
         try {
           const { data, error } = await supabase
             .from('repartos')
@@ -59,38 +60,69 @@ export default function DeliveryReportPage() {
             .eq('id', deliveryId)
             .single();
 
-          if (error) throw error;
-          if (data) {
-             // Ensure detallesreparto is sorted
-            const sortedData = {
-              ...data,
-              detallesreparto: data.detallesreparto 
-                ? [...data.detallesreparto].sort((a,b) => a.orden_visita - b.orden_visita) 
-                : [],
-            } as ReportData;
-            setReportData(sortedData);
+          if (error) {
+            console.error("Supabase error fetching report data:", error);
+            throw error; // Re-throw to be caught by the outer try-catch
           }
+          
+          if (!data) {
+            console.error("No data returned for delivery ID:", deliveryId, "even though no Supabase error was reported.");
+            throw new Error(`No se encontraron datos para el reparto ID ${deliveryId}.`);
+          }
+          
+          // Ensure detallesreparto is an array before sorting
+          const detalles = Array.isArray(data.detallesreparto) ? data.detallesreparto : [];
+          const sortedData = {
+            ...data,
+            // Ensure fecha is a string before attempting parseISO
+            fecha: typeof data.fecha === 'string' ? data.fecha : new Date(data.fecha).toISOString(),
+            detallesreparto: [...detalles].sort((a,b) => a.orden_visita - b.orden_visita),
+          } as ReportData;
+          setReportData(sortedData);
+
         } catch (error: any) {
+          const errorMessage = error.message || "No se pudo cargar la información del reparto.";
           toast({
             title: "Error al cargar el reporte",
-            description: error.message || "No se pudo cargar la información del reparto.",
+            description: errorMessage,
             variant: "destructive",
           });
-          console.error("Error fetching report data:", error);
+          console.error("Error in fetchReportData:", error);
         } finally {
           setIsLoading(false);
         }
       };
       fetchReportData();
+    } else {
+      setIsLoading(false);
+      toast({
+        title: "ID de Reparto Inválido",
+        description: "No se proporcionó un ID de reparto válido.",
+        variant: "destructive",
+      });
     }
   }, [deliveryId, toast]);
 
   const totalStops = reportData?.detallesreparto?.length || 0;
-  const totalValueToCollect = reportData?.detallesreparto?.reduce((sum, item) => sum + (item.valor_entrega || 0), 0) || 0;
+  const totalValueToCollect = reportData?.detallesreparto?.reduce((sum, item) => sum + (Number(item.valor_entrega) || 0), 0) || 0;
 
   const handlePrint = () => {
     window.print();
   };
+
+  const formatDateSafe = (dateInput: string | Date) => {
+    try {
+      const date = typeof dateInput === 'string' ? parseISO(dateInput) : dateInput;
+      if (isValid(date)) {
+        return format(date, 'PPP', { locale: es });
+      }
+      return "Fecha inválida";
+    } catch (e) {
+      console.error("Error formatting date:", dateInput, e);
+      return "Error de fecha";
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -106,7 +138,7 @@ export default function DeliveryReportPage() {
   if (!reportData) {
     return (
       <div className="space-y-6 p-4 md:p-6">
-        <PageHeader title="Reporte no encontrado" description="No se pudo cargar la información para este reparto." />
+        <PageHeader title="Reporte no encontrado" description="No se pudo cargar la información para este reparto o el ID es inválido." />
          <Button variant="outline" asChild>
             <Link href="/deliveries">
               <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Repartos
@@ -115,12 +147,12 @@ export default function DeliveryReportPage() {
       </div>
     );
   }
-
+  
   return (
     <div className="space-y-6 p-1 md:p-2 lg:p-4 print:p-0">
       <PageHeader
         title={`Reporte del Reparto #${reportData.id.substring(0, 8)}...`}
-        description={`Detalles del reparto del ${format(typeof reportData.fecha === 'string' ? parseISO(reportData.fecha) : reportData.fecha, 'PPP', { locale: es })}`}
+        description={`Detalles del reparto del ${formatDateSafe(reportData.fecha)}`}
         actions={
           <div className="flex gap-2 print:hidden">
             <Button variant="outline" asChild>
@@ -140,7 +172,7 @@ export default function DeliveryReportPage() {
           <CardTitle>Resumen del Reparto</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-          <div><strong>Fecha:</strong> {format(typeof reportData.fecha === 'string' ? parseISO(reportData.fecha) : reportData.fecha, 'PPP', { locale: es })}</div>
+          <div><strong>Fecha:</strong> {formatDateSafe(reportData.fecha)}</div>
           <div><strong>Repartidor:</strong> {reportData.repartidores?.nombre || 'N/A'}</div>
           <div><strong>Cliente Principal:</strong> {reportData.clientesnuestros?.nombre || 'N/A'}</div>
           <div><strong>Zona General:</strong> {reportData.zonas?.nombre || 'N/A'}</div>
@@ -183,7 +215,7 @@ export default function DeliveryReportPage() {
                     </TableCell>
                     <TableCell>{item.clientesreparto?.restricciones || '-'}</TableCell>
                     <TableCell className="text-right">
-                      {item.valor_entrega != null ? `$${item.valor_entrega.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                      {item.valor_entrega != null ? `$${Number(item.valor_entrega).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
                     </TableCell>
                     <TableCell>{item.detalle_entrega || '-'}</TableCell>
                   </TableRow>

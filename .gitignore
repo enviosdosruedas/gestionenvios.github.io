@@ -1,45 +1,60 @@
+
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# Dependencies
 /node_modules
 /.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+.pnp.js
+pnpm-lock.yaml
 
-# testing
-/coverage
+# Vercel
+.vercel
 
-# next.js
+# Next.js
 /.next/
 /out/
 
-# production
+# Production
 /build
 
-# misc
+# Misc
 .DS_Store
 *.pem
+*.tgz
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# vercel
-.vercel
+# Local-specific configuration files (SHOULD NOT BE COMMITTED if they contain secrets different from the base .env)
+# If .env contains generic defaults and .env.local overrides, then .env might be committed.
+# Based on user's request, .env is NOT listed here to allow it to be committed.
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# IDE + Editor
+/.idea
+.project
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.code-workspace
 
-.genkit/*
-.env*
+# Project IDX
+.idx
+*.idx.json
 
-# firebase
-firebase-debug.log
-firestore-debug.log
+# Log files
+*.log
+logs
+
+# Supabase local development files
+/supabase/.branches
+/supabase/.temp
+/supabase/db_data
+/supabase/migra_version
+/supabase/tests/test_db_data
