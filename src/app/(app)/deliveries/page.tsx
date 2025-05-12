@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -154,15 +153,15 @@ export default function DeliveriesPage() {
             fecha,
             repartidor_id,
             zona_id,
-            cliente_nuestro_id,
+            cliente_nuestro_id, 
             tanda,
             estado_entrega,
             created_at,
             updated_at,
             repartidores (nombre),
             zonas (nombre),
-            clientesnuestros:cliente_nuestro_id (id, nombre), 
-            detalles_reparto:detallesreparto (
+            clientesnuestros (id, nombre), 
+            detallesreparto (
               id,
               cliente_reparto_id,
               valor_entrega,
@@ -178,8 +177,8 @@ export default function DeliveriesPage() {
       if (data) {
         const processedData = data.map(d => ({
           ...d,
-          detalles_reparto: d.detalles_reparto 
-            ? (d.detalles_reparto as unknown as DetalleReparto[]).sort((a, b) => a.orden_visita - b.orden_visita) 
+          detalles_reparto: d.detallesreparto 
+            ? (d.detallesreparto as unknown as DetalleReparto[]).sort((a, b) => a.orden_visita - b.orden_visita) 
             : [],
         })) as Delivery[];
         setDeliveries(processedData);
@@ -191,6 +190,7 @@ export default function DeliveriesPage() {
       const userMessage = error?.message || "No se pudieron cargar los repartos. Intente más tarde.";
       toast({ title: "Error al cargar repartos", description: userMessage, variant: "destructive" });
 
+      // Improved console logging
       if (error?.message) {
         console.error("Error fetching deliveries:", error.message, "Raw error object:", error);
       } else {
@@ -690,4 +690,3 @@ export default function DeliveriesPage() {
   );
 }
     
-

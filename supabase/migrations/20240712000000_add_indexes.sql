@@ -1,3 +1,8 @@
+ALTER TABLE public.repartos
+ADD CONSTRAINT fk_repartos_cliente_nuestro_id
+FOREIGN KEY (cliente_nuestro_id)
+REFERENCES public.ClientesNuestros(id)
+ON DELETE SET NULL; -- Or ON DELETE CASCADE, depending on your desired behavior
 
 -- Add indexes to optimize query performance
 
