@@ -1,3 +1,4 @@
+
 export type ClientService = "reparto viandas" | "mensajería" | "delivery" | "otros";
 export type DayOfWeek = "lunes" | "martes" | "miércoles" | "jueves" | "viernes" | "sábado" | "domingo";
 export type FrecuenciaParada = "diario" | "lunes, miércoles y viernes" | "semanal (especificar semana)" | "único";
@@ -113,5 +114,3 @@ export const ALL_TIPO_REPARTO_CLIENTE: TipoRepartoCliente[] = ["diario", "semana
 
 // Keeping old ALL_FREQUENCIES if it's used elsewhere, but new one is ALL_FRECUENCIAS_PARADA
 export const ALL_FREQUENCIES: Stop['frecuencia'][] = ["diario", "lunes, miércoles y viernes", "semanal (especificar semana)", "único"];
-
-```
