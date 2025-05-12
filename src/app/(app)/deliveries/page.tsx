@@ -161,8 +161,8 @@ export default function DeliveriesPage() {
             updated_at,
             repartidores (nombre),
             zonas (nombre),
-            clientesnuestros:cliente_nuestro_id (id, nombre),
-            detalles_reparto:detallesreparto!inner (
+            clientesnuestros:cliente_nuestro_id (id, nombre), 
+            detalles_reparto:detallesreparto (
               id,
               cliente_reparto_id,
               valor_entrega,
@@ -191,7 +191,6 @@ export default function DeliveriesPage() {
       const userMessage = error?.message || "No se pudieron cargar los repartos. Intente más tarde.";
       toast({ title: "Error al cargar repartos", description: userMessage, variant: "destructive" });
 
-      // Improved console logging
       if (error?.message) {
         console.error("Error fetching deliveries:", error.message, "Raw error object:", error);
       } else {
@@ -219,7 +218,7 @@ export default function DeliveriesPage() {
       if (error) throw error;
       setAvailableClientesReparto(data || []);
     } catch (error: any) {
-      toast({ title: "Error al cargar clientes de reparto", description: error.message, variant: "destructive" });
+      toast({ title: "Error al cargar clientes de reparto", description: error.message || "Error desconocido", variant: "destructive" });
       console.error("Error fetching sub-clients:", error);
       setAvailableClientesReparto([]);
     }
