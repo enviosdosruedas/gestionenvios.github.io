@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
 import type { Delivery, Driver, Zone, ClienteNuestro, ClientReparto, DetalleReparto } from '@/lib/types';
-import { ALL_DELIVERY_STATUSES } from '@/lib/types';
+import { ALL_DELIVERY_STATUSES, DeliveryStatus } from '@/lib/types';
 import { z } from 'zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -57,7 +57,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const detalleRepartoSchema = z.object({
   id: z.string().optional(), // for existing items during edit
-  cliente_reparto_id: z.number().min(1, 'Seleccione un cliente de reparto.'),
+  cliente_reparto_id: z.coerce.number().min(1, 'Seleccione un cliente de reparto.'), // Changed to coerce.number()
   valor_entrega: z.coerce.number().positive('El valor debe ser positivo.').optional().nullable(),
   detalle_entrega: z.string().optional().nullable(),
   orden_visita: z.number().int(),
@@ -135,15 +135,20 @@ export default function DeliveriesPage() {
       await fetchDeliveries(); // Fetch deliveries after other dependent data
       
     } catch (error: any) {
-      toast({ title: "Error al cargar datos iniciales", description: error.message || "No se pudieron cargar los datos necesarios.", variant: "destructive" });
-      console.error("Error fetching initial data:", error);
+      const userMessage = error?.message || "No se pudieron cargar los datos necesarios. Intente más tarde.";
+      toast({ title: "Error al cargar datos iniciales", description: userMessage, variant: "destructive" });
+      
+      if (error?.message) {
+        console.error("Error fetching initial data:", error.message, "Raw error object:", error);
+      } else {
+        console.error("Error fetching initial data: An error occurred without a specific message. Raw error object:", error);
+      }
     } finally {
       setIsLoading(false);
     }
   };
   
   const fetchDeliveries = async () => {
-     // Assuming setIsLoading is handled by the caller (fetchInitialData)
     try {
         const { data, error } = await supabase.from('repartos')
           .select(`
@@ -172,10 +177,16 @@ export default function DeliveriesPage() {
 
 
       if (error) throw error;
-       setDeliveries(data.map(d => ({...d, detalles_reparto: d.detallesreparto})) || []);
+       setDeliveries(data.map(d => ({...d, detalles_reparto: d.detallesreparto as DetalleReparto[]})) || []);
     } catch (error: any) {
-      toast({ title: "Error al cargar repartos", description: error.message || "No se pudieron cargar los repartos.", variant: "destructive" });
-      console.error("Error fetching deliveries:", error);
+      const userMessage = error?.message || "No se pudieron cargar los repartos. Intente más tarde.";
+      toast({ title: "Error al cargar repartos", description: userMessage, variant: "destructive" });
+
+      if (error?.message) {
+        console.error("Error fetching deliveries:", error.message, "Raw error object:", error);
+      } else {
+        console.error("Error fetching deliveries: An error occurred without a specific message. Raw error object:", error);
+      }
     }
   };
 
@@ -215,14 +226,13 @@ export default function DeliveriesPage() {
         fecha: typeof editingDelivery.fecha === 'string' ? parseISO(editingDelivery.fecha) : editingDelivery.fecha,
         cliente_nuestro_id: editingDelivery.clientesnuestros?.id || '',
         detalles_reparto: editingDelivery.detalles_reparto?.map(d => ({
-          id: d.id, // Keep original ID for updates
+          id: d.id, 
           cliente_reparto_id: d.cliente_reparto_id,
           valor_entrega: d.valor_entrega,
           detalle_entrega: d.detalle_entrega,
           orden_visita: d.orden_visita,
         })) || [],
       });
-      // Trigger fetching sub-clients for the editing delivery's main client
       if (editingDelivery.clientesnuestros?.id) {
         fetchClientesRepartoForClienteNuestro(editingDelivery.clientesnuestros.id);
       }
@@ -236,7 +246,7 @@ export default function DeliveriesPage() {
         estado_entrega: 'pendiente',
         detalles_reparto: [],
       });
-      setAvailableClientesReparto([]); // Clear available sub-clients
+      setAvailableClientesReparto([]); 
     }
   }, [editingDelivery, form, isDialogOpen, fetchClientesRepartoForClienteNuestro]);
 
@@ -255,7 +265,7 @@ export default function DeliveriesPage() {
     try {
       let repartoId = editingDelivery?.id;
 
-      if (editingDelivery) { // Update
+      if (editingDelivery) { 
         const { data: updatedReparto, error: updateError } = await supabase
           .from('repartos')
           .update(repartoData)
@@ -266,15 +276,13 @@ export default function DeliveriesPage() {
         if (!updatedReparto) throw new Error("No se pudo actualizar el reparto.");
         repartoId = updatedReparto.id;
 
-        // Handle DetallesReparto: diffing or delete-all-and-reinsert
-        // Simple approach: delete all existing and re-insert
         const { error: deleteDetailsError } = await supabase
           .from('detallesreparto')
           .delete()
           .eq('reparto_id', repartoId);
         if (deleteDetailsError) throw deleteDetailsError;
 
-      } else { // Create
+      } else { 
         const { data: newReparto, error: insertError } = await supabase
           .from('repartos')
           .insert([repartoData])
@@ -285,14 +293,13 @@ export default function DeliveriesPage() {
         repartoId = newReparto.id;
       }
 
-      // Insert new DetallesReparto
       if (repartoId && data.detalles_reparto.length > 0) {
         const detallesToInsert = data.detalles_reparto.map((detalle, index) => ({
           reparto_id: repartoId,
           cliente_reparto_id: detalle.cliente_reparto_id,
           valor_entrega: detalle.valor_entrega || null,
           detalle_entrega: detalle.detalle_entrega || null,
-          orden_visita: index, // Use array index as order
+          orden_visita: index, 
         }));
         const { error: insertDetailsError } = await supabase
           .from('detallesreparto')
@@ -305,23 +312,32 @@ export default function DeliveriesPage() {
       setEditingDelivery(null);
       setIsDialogOpen(false);
     } catch (error: any) {
-      toast({ title: "Error al guardar", description: error.message || "Ocurrió un error al guardar el reparto.", variant: "destructive" });
-      console.error("Error submitting delivery:", error);
+      const userMessage = error?.message || "Ocurrió un error al guardar el reparto.";
+      toast({ title: "Error al guardar", description: userMessage, variant: "destructive" });
+      if (error?.message) {
+        console.error("Error submitting delivery:", error.message, "Raw error object:", error);
+      } else {
+        console.error("Error submitting delivery: An error occurred without a specific message. Raw error object:", error);
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    // Deleting DetallesReparto is handled by ON DELETE CASCADE from the database.
     try {
       const { error } = await supabase.from('repartos').delete().eq('id', id);
       if (error) throw error;
       fetchDeliveries();
       toast({ title: "Reparto Eliminado", description: "El reparto ha sido eliminado.", variant: "destructive" });
     } catch (error: any) {
-      toast({ title: "Error al eliminar", description: error.message || "Ocurrió un error al eliminar el reparto.", variant: "destructive" });
-      console.error("Error deleting delivery:", error);
+      const userMessage = error?.message || "Ocurrió un error al eliminar el reparto.";
+      toast({ title: "Error al eliminar", description: userMessage, variant: "destructive" });
+      if (error?.message) {
+        console.error("Error deleting delivery:", error.message, "Raw error object:", error);
+      } else {
+        console.error("Error deleting delivery: An error occurred without a specific message. Raw error object:", error);
+      }
     }
   };
   
@@ -354,7 +370,6 @@ export default function DeliveriesPage() {
        toast({ title: "Sin Clientes de Reparto", description: "El cliente principal seleccionado no tiene clientes de reparto asociados o aún no se cargaron.", variant: "destructive"});
        return;
     }
-    // Add a new empty item, user will select the cliente_reparto_id
     append({ cliente_reparto_id: 0, valor_entrega: null, detalle_entrega: '', orden_visita: fields.length });
   };
 
@@ -433,13 +448,12 @@ export default function DeliveriesPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"> {/* Increased width for more complex form */}
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"> 
           <DialogHeader>
             <DialogTitle>{editingDelivery ? 'Editar' : 'Nuevo'} Reparto</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 pr-1">
-              {/* Basic Reparto Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -498,7 +512,7 @@ export default function DeliveriesPage() {
                         <Select 
                             onValueChange={(value) => {
                                 field.onChange(value);
-                                form.setValue('detalles_reparto', []); // Clear details when main client changes
+                                form.setValue('detalles_reparto', []); 
                             }} 
                             value={field.value} 
                             defaultValue={field.value} 
@@ -553,7 +567,7 @@ export default function DeliveriesPage() {
                         <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger></FormControl>
                         <SelectContent>
-                            {ALL_DELIVERY_STATUSES.map((status) => (
+                            {ALL_DELIVERY_STATUSES.map((status: DeliveryStatus) => ( // Explicitly type status
                             <SelectItem key={status} value={status}> {status.charAt(0).toUpperCase() + status.slice(1)}</SelectItem>
                             ))}
                         </SelectContent>
@@ -563,7 +577,6 @@ export default function DeliveriesPage() {
                     )}
                 />
               
-              {/* Detalles de Reparto (Items) */}
               <Card className="mt-6">
                 <CardHeader>
                   <div className="flex justify-between items-center">
@@ -590,8 +603,8 @@ export default function DeliveriesPage() {
                           <FormItem>
                             <FormLabel>Cliente de Reparto</FormLabel>
                             <Select 
-                              onValueChange={(value) => field.onChange(parseInt(value,10))} // Ensure value is number
-                              value={field.value?.toString()} // Ensure value is string for Select
+                              onValueChange={(value) => field.onChange(parseInt(value,10))} 
+                              value={field.value?.toString()} 
                               disabled={isSubmitting || availableClientesReparto.length === 0}
                             >
                               <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar cliente de reparto" /></SelectTrigger></FormControl>
@@ -632,7 +645,7 @@ export default function DeliveriesPage() {
                        <FormField
                         control={form.control}
                         name={`detalles_reparto.${index}.orden_visita`}
-                        render={({ field }) => <Input type="hidden" {...field} />} // Hidden, managed by array order
+                        render={({ field }) => <Input type="hidden" {...field} value={index} />} 
                       />
                     </div>
                   ))}
