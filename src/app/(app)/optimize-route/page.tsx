@@ -5,7 +5,6 @@ import React, { useState }from 'react';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-// Removed Textarea import as it's not used directly
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -13,9 +12,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { optimizeRouteAction } from './actions';
 import { OptimizeRouteFormSchema, type OptimizeRouteFormValues } from './optimize-route.schema'; 
 import type { OptimizeDeliveryRouteOutput } from '@/ai/flows/optimize-delivery-route'; 
-import { Loader2, PlusCircle, Trash2, RouteIcon } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, RouteIcon, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; // Added Table imports
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function OptimizeRoutePage() {
   const [optimizationResult, setOptimizationResult] = useState<OptimizeDeliveryRouteOutput | null>(null);
@@ -25,16 +25,18 @@ export default function OptimizeRoutePage() {
   const form = useForm<OptimizeRouteFormValues>({
     resolver: zodResolver(OptimizeRouteFormSchema), 
     defaultValues: {
-      stops: [{ address: '', priority: 1 }],
-      vehicleCapacity: 100, // Default capacity
-      timeWindowStart: '09:00',
-      timeWindowEnd: '17:00',
+      startLocation: '',
+      averageVehicleSpeed: 50, // Default speed in km/h
+      newDeliveries: [{ address: '', priority: 1 }],
+      vehicleCapacity: 100, 
+      overallTimeWindowStart: '09:00',
+      overallTimeWindowEnd: '17:00',
     },
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "stops",
+    name: "newDeliveries", // Changed from "stops" to "newDeliveries"
   });
 
   async function onSubmit(values: OptimizeRouteFormValues) {
@@ -51,7 +53,6 @@ export default function OptimizeRoutePage() {
       if (typeof result.error === 'string') {
         errorMessage = result.error;
       } else if (result.error && 'fieldErrors' in result.error) {
-        // Ensure fieldErrors is an object before trying to access its values
         const fieldErrorsString = typeof result.error.fieldErrors === 'object' 
           ? Object.values(result.error.fieldErrors).flat().join(' ') 
           : '';
@@ -79,14 +80,43 @@ export default function OptimizeRoutePage() {
               <CardDescription>Complete los campos para la optimización.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="startLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ubicación de Partida</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ej: Depósito Central, Mar del Plata" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="averageVehicleSpeed"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Velocidad Promedio del Vehículo (km/h)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="Ej: 50" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <div>
-                <FormLabel>Paradas de Entrega</FormLabel>
+                <FormLabel>Nuevas Entregas a Planificar</FormLabel>
                 <FormDescription className="mb-2">Añada todas las direcciones a visitar y su prioridad (mayor número = mayor prioridad).</FormDescription>
                 {fields.map((field, index) => (
                   <div key={field.id} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-background">
                     <FormField
                       control={form.control}
-                      name={`stops.${index}.address`}
+                      name={`newDeliveries.${index}.address`}
                       render={({ field: formField }) => ( 
                         <FormItem className="flex-grow w-full sm:w-auto">
                            {index === 0 && <FormLabel className="text-xs">Dirección</FormLabel>}
@@ -99,7 +129,7 @@ export default function OptimizeRoutePage() {
                     />
                     <FormField
                       control={form.control}
-                      name={`stops.${index}.priority`}
+                      name={`newDeliveries.${index}.priority`}
                       render={({ field: formField }) => ( 
                         <FormItem className="w-full sm:w-24">
                            {index === 0 && <FormLabel className="text-xs">Prioridad</FormLabel>}
@@ -110,7 +140,7 @@ export default function OptimizeRoutePage() {
                         </FormItem>
                       )}
                     />
-                    <div className="self-start sm:self-end pt-1 sm:pt-0"> {/* Adjusted padding for alignment */}
+                    <div className="self-start sm:self-end pt-1 sm:pt-0">
                       {fields.length > 1 && (
                         <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} aria-label={`Eliminar parada ${index + 1}`}>
                           <Trash2 className="h-4 w-4" />
@@ -128,7 +158,7 @@ export default function OptimizeRoutePage() {
                 >
                   <PlusCircle className="mr-2 h-4 w-4" /> Añadir Parada
                 </Button>
-                 <FormMessage>{form.formState.errors.stops?.message || form.formState.errors.stops?.root?.message}</FormMessage>
+                 <FormMessage>{form.formState.errors.newDeliveries?.message || form.formState.errors.newDeliveries?.root?.message}</FormMessage>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -148,10 +178,10 @@ export default function OptimizeRoutePage() {
                 />
                 <FormField
                   control={form.control}
-                  name="timeWindowStart"
+                  name="overallTimeWindowStart"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Inicio Ventana Horaria</FormLabel>
+                      <FormLabel>Inicio Ventana Horaria General</FormLabel>
                       <FormControl>
                         <Input type="time" {...field} />
                       </FormControl>
@@ -162,10 +192,10 @@ export default function OptimizeRoutePage() {
                 />
                 <FormField
                   control={form.control}
-                  name="timeWindowEnd"
+                  name="overallTimeWindowEnd"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fin Ventana Horaria</FormLabel>
+                      <FormLabel>Fin Ventana Horaria General</FormLabel>
                       <FormControl>
                         <Input type="time" {...field} />
                       </FormControl>
@@ -201,6 +231,19 @@ export default function OptimizeRoutePage() {
             <CardTitle className="text-2xl text-primary">Resultado de la Optimización</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {optimizationResult.warnings && optimizationResult.warnings.length > 0 && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Advertencias</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc pl-5">
+                    {optimizationResult.warnings.map((warning, index) => (
+                      <li key={index}>{warning}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
             <div>
               <h3 className="font-semibold text-lg">Ruta Optimizada:</h3>
               <div className="relative w-full overflow-auto mt-2">
@@ -208,16 +251,20 @@ export default function OptimizeRoutePage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[50px]">#</TableHead>
+                      <TableHead>ID Entrega</TableHead>
                       <TableHead>Dirección</TableHead>
-                      <TableHead className="text-right">Prioridad</TableHead>
+                      <TableHead>Llegada Estimada</TableHead>
+                      <TableHead>Notas</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {optimizationResult.optimizedRoute.map((stop, index) => (
+                    {optimizationResult.deliveryOrder.map((stop, index) => (
                       <TableRow key={index}>
                         <TableCell>{index + 1}</TableCell>
+                        <TableCell className="font-mono text-xs">{stop.deliveryId}</TableCell>
                         <TableCell className="font-medium">{stop.address}</TableCell>
-                        <TableCell className="text-right">{stop.priority}</TableCell>
+                        <TableCell>{stop.estimatedArrivalTime}</TableCell>
+                        <TableCell>{stop.notes || '-'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -225,8 +272,8 @@ export default function OptimizeRoutePage() {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                <p className="text-sm"><strong className="font-medium">Tiempo Estimado de Viaje:</strong> {optimizationResult.estimatedTravelTime}</p>
-                <p className="text-sm"><strong className="font-medium">Distancia Estimada de Viaje:</strong> {optimizationResult.estimatedTravelDistance}</p>
+                <p className="text-sm"><strong className="font-medium">Tiempo Total Estimado:</strong> {optimizationResult.totalTime}</p>
+                <p className="text-sm"><strong className="font-medium">Distancia Total Estimada:</strong> {optimizationResult.totalDistance}</p>
             </div>
           </CardContent>
         </Card>
@@ -234,4 +281,4 @@ export default function OptimizeRoutePage() {
     </div>
   );
 }
-
+```
