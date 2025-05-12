@@ -10,7 +10,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { OptimizeRouteFormSchema, OptimizeRouteFormValues, optimizeRouteAction } from './actions';
-import type { OptimizeDeliveryRouteOutput } from '@/ai/flows/optimize-delivery-route';
+import { OptimizeRouteFormSchema as OptimizeRouteFormSchemaFromSchema } from './optimize-route.schema'; // Correct import
+import type { OptimizeDeliveryRouteOutput, OptimizeDeliveryRouteInput } from '@/ai/flows/optimize-delivery-route'; // Add OptimizeDeliveryRouteInput if needed
 import { Loader2, PlusCircle, Trash2, RouteIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,7 +21,7 @@ export default function OptimizeRoutePage() {
   const { toast } = useToast();
 
   const form = useForm<OptimizeRouteFormValues>({
-    resolver: zodResolver(OptimizeRouteFormSchema),
+    resolver: zodResolver(OptimizeRouteFormSchemaFromSchema), // Use the correctly imported schema
     defaultValues: {
       stops: [{ address: '', priority: 1 }],
       vehicleCapacity: 100, // Default capacity
