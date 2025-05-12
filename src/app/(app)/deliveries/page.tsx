@@ -213,7 +213,7 @@ export default function DeliveriesPage() {
   }, []);
 
   const fetchClientesRepartoForClienteNuestro = useCallback(async (clienteNuestroId: string | undefined | null) => {
-    if (!clienteNuestroId) {
+    if (!clienteNuestroId || clienteNuestroId === NULL_VALUE_PLACEHOLDER) {
       setAvailableClientesReparto([]);
       return;
     }
@@ -273,7 +273,7 @@ export default function DeliveriesPage() {
     const repartoData = {
       fecha: format(data.fecha, 'yyyy-MM-dd'),
       repartidor_id: data.repartidor_id,
-      cliente_nuestro_id: data.cliente_nuestro_id || null,
+      cliente_nuestro_id: data.cliente_nuestro_id === NULL_VALUE_PLACEHOLDER ? null : data.cliente_nuestro_id,
       zona_id: data.zona_id,
       tanda: data.tanda,
       estado_entrega: data.estado_entrega,
@@ -316,7 +316,7 @@ export default function DeliveriesPage() {
           cliente_reparto_id: detalle.cliente_reparto_id,
           valor_entrega: detalle.valor_entrega || null,
           detalle_entrega: detalle.detalle_entrega || null,
-          orden_visita: index,
+          orden_visita: index, // Ensure orden_visita is set sequentially from the form's array index
         }));
         const { error: insertDetailsError } = await supabase
           .from('detallesreparto')
@@ -386,7 +386,7 @@ export default function DeliveriesPage() {
   };
 
   const handleAddDetalleReparto = () => {
-    if (!selectedClienteNuestroId) {
+    if (!selectedClienteNuestroId || selectedClienteNuestroId === NULL_VALUE_PLACEHOLDER) {
       toast({ title: "Seleccione Cliente Principal", description: "Debe seleccionar un cliente principal antes de agregar ítems.", variant: "destructive"});
       return;
     }
@@ -480,7 +480,7 @@ export default function DeliveriesPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[90vw] max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDelivery ? 'Editar' : 'Nuevo'} Reparto</DialogTitle>
           </DialogHeader>
@@ -551,7 +551,7 @@ export default function DeliveriesPage() {
                         >
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar cliente principal" /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value={NULL_VALUE_PLACEHOLDER}>Sin cliente principal</SelectItem>
+                          <SelectItem value={NULL_VALUE_PLACEHOLDER}>Sin cliente principal (Reparto General)</SelectItem>
                             {clientesNuestros.map((cliente) => (
                             <SelectItem key={cliente.id} value={cliente.id}>{cliente.nombre}</SelectItem>
                             ))}
@@ -600,7 +600,7 @@ export default function DeliveriesPage() {
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger></FormControl>
                         <SelectContent>
                             {ALL_DELIVERY_STATUSES.map((statusValue) => (
-                            <SelectItem key={statusValue} value={statusValue}> {statusValue.charAt(0).toUpperCase() + statusValue.slice(1)}</SelectItem>
+                            <SelectItem key={statusValue} value={statusValue}> {typeof statusValue === 'string' ? statusValue.charAt(0).toUpperCase() + statusValue.slice(1) : statusValue}</SelectItem>
                             ))}
                         </SelectContent>
                         </Select>
@@ -613,11 +613,11 @@ export default function DeliveriesPage() {
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-medium">Ítems de Entrega</h3>
-                    <Button type="button" variant="outline" size="sm" onClick={handleAddDetalleReparto} disabled={!selectedClienteNuestroId || isSubmitting}>
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddDetalleReparto} disabled={!selectedClienteNuestroId || selectedClienteNuestroId === NULL_VALUE_PLACEHOLDER || isSubmitting}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
                     </Button>
                   </div>
-                  {!selectedClienteNuestroId && <FormDescription className="text-destructive">Seleccione un Cliente Principal para agregar ítems.</FormDescription>}
+                  {(!selectedClienteNuestroId || selectedClienteNuestroId === NULL_VALUE_PLACEHOLDER) && <FormDescription className="text-destructive">Seleccione un Cliente Principal para agregar ítems.</FormDescription>}
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {fields.map((item, index) => (
@@ -681,7 +681,7 @@ export default function DeliveriesPage() {
                       />
                     </div>
                   ))}
-                  {fields.length === 0 && selectedClienteNuestroId && (
+                  {fields.length === 0 && selectedClienteNuestroId && selectedClienteNuestroId !== NULL_VALUE_PLACEHOLDER && (
                     <p className="text-sm text-muted-foreground">No hay ítems de entrega. Haga clic en "Añadir Ítem".</p>
                   )}
                   <FormMessage>{form.formState.errors.detalles_reparto?.message || form.formState.errors.detalles_reparto?.root?.message}</FormMessage>
@@ -704,5 +704,3 @@ export default function DeliveriesPage() {
     </>
   );
 }
-
-
