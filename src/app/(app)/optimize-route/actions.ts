@@ -17,8 +17,7 @@ export async function optimizeRouteAction(values: OptimizeRouteFormValues): Prom
     return { success: false, error: validationResult.error.flatten() };
   }
   
-  // Assuming OptimizeRouteFormValues is compatible with OptimizeDeliveryRouteInput
-  // If not, a transformation step would be needed here.
+  // The form values should be compatible with the Genkit flow input after validation
   const input: OptimizeDeliveryRouteInput = validationResult.data;
 
   try {

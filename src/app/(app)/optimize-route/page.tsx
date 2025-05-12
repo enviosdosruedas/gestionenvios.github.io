@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState }from 'react';
@@ -9,9 +10,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { OptimizeRouteFormSchema, OptimizeRouteFormValues, optimizeRouteAction } from './actions';
-import { OptimizeRouteFormSchema as OptimizeRouteFormSchemaFromSchema } from './optimize-route.schema'; // Correct import
-import type { OptimizeDeliveryRouteOutput, OptimizeDeliveryRouteInput } from '@/ai/flows/optimize-delivery-route'; // Add OptimizeDeliveryRouteInput if needed
+import { optimizeRouteAction } from './actions';
+import { OptimizeRouteFormSchema, OptimizeRouteFormValues } from './optimize-route.schema'; 
+import type { OptimizeDeliveryRouteOutput, OptimizeDeliveryRouteInput } from '@/ai/flows/optimize-delivery-route'; 
 import { Loader2, PlusCircle, Trash2, RouteIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,7 +22,7 @@ export default function OptimizeRoutePage() {
   const { toast } = useToast();
 
   const form = useForm<OptimizeRouteFormValues>({
-    resolver: zodResolver(OptimizeRouteFormSchemaFromSchema), // Use the correctly imported schema
+    resolver: zodResolver(OptimizeRouteFormSchema), 
     defaultValues: {
       stops: [{ address: '', priority: 1 }],
       vehicleCapacity: 100, // Default capacity
@@ -214,3 +215,4 @@ export default function OptimizeRoutePage() {
     </div>
   );
 }
+
