@@ -9,6 +9,7 @@
     pkgs.zulu
     pkgs.corepack_latest
     pkgs.python3
+    pkgs.supabase-cli
   ];
   # Sets environment variables in the workspace
   env = {};
