@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -34,8 +33,8 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  manifest: "/manifest.json", // Ensure this file exists in /public
-  robots: { // Corrected directives
+  manifest: "/manifest.json", 
+  robots: { 
     index: true,
     follow: true,
     googleBot: {
@@ -48,8 +47,8 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: '/',
-    languages: { // Example, assuming Spanish (Argentina) is primary
-      'es-AR': '/es-AR', // If you have a dedicated Spanish version at this path
+    languages: { 
+      'es-AR': '/es-AR', 
     },
   },
   openGraph: {
@@ -61,7 +60,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: `/og-image.png`, // Assumes og-image.png is in /public
+        url: `/og-image.png`, 
         width: 1200,
         height: 630,
         alt: `Logo de ${APP_NAME}`,
@@ -72,12 +71,12 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: APP_NAME,
     description: APP_DESCRIPTION,
-    images: [`/twitter-image.png`], // Assumes twitter-image.png is in /public
-    // creator: '@yourtwitterhandle', // Uncomment if you have a Twitter handle
+    images: [`/twitter-image.png`], 
+    // creator: '@yourtwitterhandle', 
   },
-  icons: { // Standard way to declare favicons
+  icons: { 
     icon: '/favicon.ico',
-    shortcut: '/favicon.svg', // or /favicon-16x16.png etc.
+    shortcut: '/favicon.svg', 
     apple: '/apple-touch-icon.png',
   },
 };
@@ -86,7 +85,6 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1, 
-  // userScalable: false, // Generally better to allow user scaling for accessibility
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#00296B' }, 
     { media: '(prefers-color-scheme: dark)', color: '#00102b' },  
@@ -100,7 +98,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning> {/* suppressHydrationWarning on html is often sufficient */}
+    <html lang="es" suppressHydrationWarning={true}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
         <Toaster />
@@ -108,4 +106,3 @@ export default function RootLayout({
     </html>
   );
 }
-
