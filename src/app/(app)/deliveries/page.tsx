@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -68,7 +69,7 @@ const detalleRepartoSchema = z.object({
 const deliverySchema = z.object({
   fecha: z.date({ required_error: 'La fecha es requerida.' }),
   repartidor_id: z.string().uuid('Seleccione un repartidor.'),
-  cliente_nuestro_id: z.string().uuid("Seleccione un cliente principal."),
+  cliente_nuestro_id: z.string().uuid("Seleccione un cliente principal.").nullable(),
   zona_id: z.string().uuid('Seleccione una zona para el reparto general.'),
   tanda: z.coerce.number().int().min(1, 'La tanda debe ser un número positivo.'),
   estado_entrega: z.enum(ALL_DELIVERY_STATUSES),
@@ -95,7 +96,7 @@ export default function DeliveriesPage() {
     defaultValues: {
       fecha: new Date(),
       repartidor_id: '',
-      cliente_nuestro_id: '',
+      cliente_nuestro_id: null,
       zona_id: '',
       tanda: 1,
       estado_entrega: 'pendiente',
@@ -153,14 +154,15 @@ export default function DeliveriesPage() {
             fecha,
             repartidor_id,
             zona_id,
+            cliente_nuestro_id,
             tanda,
             estado_entrega,
             created_at,
             updated_at,
             repartidores (nombre),
             zonas (nombre),
-            clientesnuestros (id, nombre),
-            detallesreparto (
+            clientesnuestros:cliente_nuestro_id (id, nombre),
+            detalles_reparto:detallesreparto!inner (
               id,
               cliente_reparto_id,
               valor_entrega,
@@ -169,15 +171,15 @@ export default function DeliveriesPage() {
               clientesreparto (nombre, direccion)
             )
           `)
-          .order('fecha', { ascending: false }); // Removed ordering by detallesreparto.orden_visita
+          .order('fecha', { ascending: false }); 
 
       if (error) throw error;
 
       if (data) {
         const processedData = data.map(d => ({
           ...d,
-          detalles_reparto: d.detallesreparto 
-            ? (d.detallesreparto as DetalleReparto[]).sort((a, b) => a.orden_visita - b.orden_visita) 
+          detalles_reparto: d.detalles_reparto 
+            ? (d.detalles_reparto as unknown as DetalleReparto[]).sort((a, b) => a.orden_visita - b.orden_visita) 
             : [],
         })) as Delivery[];
         setDeliveries(processedData);
@@ -189,6 +191,7 @@ export default function DeliveriesPage() {
       const userMessage = error?.message || "No se pudieron cargar los repartos. Intente más tarde.";
       toast({ title: "Error al cargar repartos", description: userMessage, variant: "destructive" });
 
+      // Improved console logging
       if (error?.message) {
         console.error("Error fetching deliveries:", error.message, "Raw error object:", error);
       } else {
@@ -202,7 +205,7 @@ export default function DeliveriesPage() {
     fetchInitialData();
   }, []);
 
-  const fetchClientesRepartoForClienteNuestro = useCallback(async (clienteNuestroId: string | undefined) => {
+  const fetchClientesRepartoForClienteNuestro = useCallback(async (clienteNuestroId: string | undefined | null) => {
     if (!clienteNuestroId) {
       setAvailableClientesReparto([]);
       return;
@@ -231,7 +234,7 @@ export default function DeliveriesPage() {
       form.reset({
         ...editingDelivery,
         fecha: typeof editingDelivery.fecha === 'string' ? parseISO(editingDelivery.fecha) : editingDelivery.fecha,
-        cliente_nuestro_id: editingDelivery.clientesnuestros?.id || '',
+        cliente_nuestro_id: editingDelivery.clientesnuestros?.id || null,
         detalles_reparto: editingDelivery.detalles_reparto?.map(d => ({
           id: d.id, 
           cliente_reparto_id: d.cliente_reparto_id,
@@ -247,7 +250,7 @@ export default function DeliveriesPage() {
       form.reset({
         fecha: new Date(),
         repartidor_id: '',
-        cliente_nuestro_id: '',
+        cliente_nuestro_id: null,
         zona_id: '',
         tanda: 1,
         estado_entrega: 'pendiente',
@@ -263,7 +266,7 @@ export default function DeliveriesPage() {
     const repartoData = {
       fecha: format(data.fecha, 'yyyy-MM-dd'),
       repartidor_id: data.repartidor_id,
-      cliente_nuestro_id: data.cliente_nuestro_id,
+      cliente_nuestro_id: data.cliente_nuestro_id || null,
       zona_id: data.zona_id,
       tanda: data.tanda,
       estado_entrega: data.estado_entrega,
@@ -333,8 +336,17 @@ export default function DeliveriesPage() {
 
   const handleDelete = async (id: string) => {
     try {
+      // First delete related details
+      const { error: deleteDetailsError } = await supabase
+        .from('detallesreparto')
+        .delete()
+        .eq('reparto_id', id);
+      if (deleteDetailsError) throw deleteDetailsError;
+      
+      // Then delete the main delivery
       const { error } = await supabase.from('repartos').delete().eq('id', id);
       if (error) throw error;
+      
       fetchDeliveries();
       toast({ title: "Reparto Eliminado", description: "El reparto ha sido eliminado.", variant: "destructive" });
     } catch (error: any) {
@@ -358,7 +370,7 @@ export default function DeliveriesPage() {
     form.reset({
       fecha: new Date(),
       repartidor_id: '',
-      cliente_nuestro_id: '',
+      cliente_nuestro_id: null,
       zona_id: '',
       tanda: 1,
       estado_entrega: 'pendiente',
@@ -429,8 +441,8 @@ export default function DeliveriesPage() {
                         variant={delivery.estado_entrega === 'entregado' ? 'default' : (delivery.estado_entrega === 'en curso' ? 'secondary' : 'outline')}
                         className={cn(
                             {'bg-green-500 text-primary-foreground': delivery.estado_entrega === 'entregado'},
-                            {'bg-polynesian-blue-500 text-primary-foreground': delivery.estado_entrega === 'en curso'}, // Using Polynesian Blue for "en curso"
-                            {'bg-mikado-yellow-500 text-secondary-foreground': delivery.estado_entrega === 'pendiente'}, // Using Mikado Yellow for "pendiente"
+                            {'bg-polynesian-blue-500 text-primary-foreground': delivery.estado_entrega === 'en curso'},
+                            {'bg-mikado-yellow-500 text-secondary-foreground': delivery.estado_entrega === 'pendiente'},
                             {'bg-red-500 text-destructive-foreground': delivery.estado_entrega === 'cancelado'},
                             {'bg-purple-500 text-primary-foreground': delivery.estado_entrega === 'reprogramado'}
                         )}
@@ -521,8 +533,7 @@ export default function DeliveriesPage() {
                                 field.onChange(value);
                                 form.setValue('detalles_reparto', []); 
                             }} 
-                            value={field.value} 
-                            defaultValue={field.value} 
+                            value={field.value || ""} 
                             disabled={isSubmitting}
                         >
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar cliente principal" /></SelectTrigger></FormControl>
@@ -574,7 +585,7 @@ export default function DeliveriesPage() {
                         <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger></FormControl>
                         <SelectContent>
-                            {ALL_DELIVERY_STATUSES.map((status: DeliveryStatus) => (
+                            {ALL_DELIVERY_STATUSES.map((status) => (
                             <SelectItem key={status} value={status}> {status.charAt(0).toUpperCase() + status.slice(1)}</SelectItem>
                             ))}
                         </SelectContent>
@@ -680,3 +691,4 @@ export default function DeliveriesPage() {
   );
 }
     
+
