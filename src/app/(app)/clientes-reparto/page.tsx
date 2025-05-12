@@ -8,8 +8,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogClose,
 } from '@/components/ui/dialog';
 import {
   Table,
@@ -20,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
-import { ClientReparto, ClienteNuestro, DayOfWeek, TipoRepartoCliente, ALL_DAYS, ALL_TIPO_REPARTO_CLIENTE } from '@/lib/types';
+import type { ClientReparto, ClienteNuestro } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -45,15 +43,22 @@ export default function ClientesRepartoPage() {
         supabase.from('ClientesNuestros').select('id, nombre').order('nombre', { ascending: true })
       ]);
 
-      if (clientsRepartoRes.error) throw clientsRepartoRes.error;
+      if (clientsRepartoRes.error) {
+        console.error("Supabase error (ClientesReparto):", clientsRepartoRes.error);
+        throw new Error(`Error al cargar clientes de reparto: ${clientsRepartoRes.error.message} (Código: ${clientsRepartoRes.error.code})`);
+      }
       setClientsReparto(clientsRepartoRes.data || []);
 
-      if (clientesNuestrosRes.error) throw clientesNuestrosRes.error;
+      if (clientesNuestrosRes.error) {
+        console.error("Supabase error (ClientesNuestros):", clientesNuestrosRes.error);
+        throw new Error(`Error al cargar clientes principales: ${clientesNuestrosRes.error.message} (Código: ${clientesNuestrosRes.error.code})`);
+      }
       setClientesNuestros(clientesNuestrosRes.data || []);
 
     } catch (error: any) {
+      // The error caught here should now be an Error instance with a proper message
       toast({ title: "Error al cargar datos", description: error.message || "No se pudieron cargar los datos necesarios.", variant: "destructive" });
-      console.error("Error fetching data:", error);
+      console.error("Error in fetchData (ClientesRepartoPage):", error);
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +72,8 @@ export default function ClientesRepartoPage() {
     setIsSubmitting(true);
     try {
       if (editingClientReparto) {
-        const { error } = await supabase.from('ClientesReparto').update(data).eq('id', editingClientReparto.id);
+        // Supabase expects 'id' for ClientReparto to be a number if it's SERIAL
+        const { error } = await supabase.from('ClientesReparto').update(data).eq('id', editingClientReparto.id as unknown as number);
         if (error) throw error;
         toast({ title: "Cliente de Reparto Actualizado", description: "El cliente ha sido actualizado con éxito." });
       } else {
@@ -116,7 +122,7 @@ export default function ClientesRepartoPage() {
         title="Gestión de Clientes de Reparto"
         description="Administra los clientes terciarios (clientes de tus clientes)."
         actions={
-          <Button onClick={openNewDialog}>
+          <Button onClick={openNewDialog} disabled={isLoading || isSubmitting}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Nuevo Cliente de Reparto
           </Button>
@@ -155,10 +161,10 @@ export default function ClientesRepartoPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(client)}>
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(client)} disabled={isSubmitting}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)} disabled={isSubmitting}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -170,7 +176,7 @@ export default function ClientesRepartoPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open); }}>
         <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingClientReparto ? 'Editar' : 'Nuevo'} Cliente de Reparto</DialogTitle>
