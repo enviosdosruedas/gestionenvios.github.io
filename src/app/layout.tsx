@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -15,7 +16,7 @@ const geistMono = Geist_Mono({
 
 const APP_NAME = "Viandas Express Admin";
 const APP_DESCRIPTION = "Gestión de operaciones de entrega y optimización de rutas para Viandas Express en Mar del Plata, Argentina.";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://gestionenviospruebas.netlify.app"; 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://gestionenviospruebas.netlify.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
@@ -33,8 +34,8 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  manifest: "/manifest.json", 
-  robots: { 
+  manifest: "/manifest.json",
+  robots: {
     index: true,
     follow: true,
     googleBot: {
@@ -47,8 +48,8 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: '/',
-    languages: { 
-      'es-AR': '/es-AR', 
+    languages: {
+      'es-AR': '/es-AR',
     },
   },
   openGraph: {
@@ -60,7 +61,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: `/og-image.png`, 
+        url: `/og-image.png`,
         width: 1200,
         height: 630,
         alt: `Logo de ${APP_NAME}`,
@@ -71,12 +72,12 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: APP_NAME,
     description: APP_DESCRIPTION,
-    images: [`/twitter-image.png`], 
-    // creator: '@yourtwitterhandle', 
+    images: [`/twitter-image.png`],
+    // creator: '@yourtwitterhandle',
   },
-  icons: { 
+  icons: {
     icon: '/favicon.ico',
-    shortcut: '/favicon.svg', 
+    shortcut: '/favicon.svg',
     apple: '/apple-touch-icon.png',
   },
 };
@@ -84,10 +85,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, 
+  maximumScale: 1,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#00296B' }, 
-    { media: '(prefers-color-scheme: dark)', color: '#00102b' },  
+    { media: '(prefers-color-scheme: light)', color: '#00296B' },
+    { media: '(prefers-color-scheme: dark)', color: '#00102b' },
   ],
 };
 
