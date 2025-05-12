@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -20,7 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
-import { Product, ALL_PRODUCT_STATUSES } from '@/lib/types';
+import type { Product } from '@/lib/types';
+import { ALL_PRODUCT_STATUSES } from '@/lib/types';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -80,7 +82,10 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.from('productos').select('*').order('nombre', { ascending: true });
+      const { data, error } = await supabase
+        .from('productos')
+        .select('id, nombre, descripcion, categoria, precio, estado, created_at, updated_at')
+        .order('nombre', { ascending: true });
       if (error) throw error;
       setProducts(data || []);
     } catch (error: any) {

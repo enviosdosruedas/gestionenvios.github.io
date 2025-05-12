@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -28,7 +29,7 @@ import ClientRepartoForm from './client-reparto-form';
 
 export default function ClientesRepartoPage() {
   const [clientsReparto, setClientsReparto] = useState<ClientReparto[]>([]);
-  const [clientesNuestros, setClientesNuestros] = useState<ClienteNuestro[]>([]);
+  const [clientesNuestros, setClientesNuestros] = useState<Pick<ClienteNuestro, 'id' | 'nombre'>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false); 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -39,8 +40,23 @@ export default function ClientesRepartoPage() {
     setIsLoading(true);
     try {
       const [clientsRepartoRes, clientesNuestrosRes] = await Promise.all([
-        supabase.from('ClientesReparto').select('*').order('nombre', { ascending: true }),
-        supabase.from('ClientesNuestros').select('id, nombre').order('nombre', { ascending: true })
+        supabase.from('clientesreparto') // Corrected table name
+          .select(`
+            id,
+            nombre,
+            direccion,
+            horario_inicio,
+            horario_fin,
+            restricciones,
+            tipo_reparto,
+            dias_especificos,
+            cliente_nuestro_id,
+            created_at,
+            updated_at,
+            clientesnuestros (nombre)
+          `)
+          .order('nombre', { ascending: true }),
+        supabase.from('clientesnuestros').select('id, nombre').order('nombre', { ascending: true })
       ]);
 
       if (clientsRepartoRes.error) {
@@ -56,7 +72,6 @@ export default function ClientesRepartoPage() {
       setClientesNuestros(clientesNuestrosRes.data || []);
 
     } catch (error: any) {
-      // The error caught here should now be an Error instance with a proper message
       toast({ title: "Error al cargar datos", description: error.message || "No se pudieron cargar los datos necesarios.", variant: "destructive" });
       console.error("Error in fetchData (ClientesRepartoPage):", error);
     } finally {
@@ -68,16 +83,24 @@ export default function ClientesRepartoPage() {
     fetchData();
   }, []);
 
-  const handleFormSubmit = async (data: Omit<ClientReparto, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleFormSubmit = async (data: Omit<ClientReparto, 'id' | 'created_at' | 'updated_at' | 'clientesnuestros'>) => {
     setIsSubmitting(true);
+    const submissionData = {
+      ...data,
+      horario_inicio: data.horario_inicio || null,
+      horario_fin: data.horario_fin || null,
+      restricciones: data.restricciones || null,
+      tipo_reparto: data.tipo_reparto || null,
+      dias_especificos: data.dias_especificos?.length ? data.dias_especificos : null,
+    };
+    
     try {
       if (editingClientReparto) {
-        // Supabase expects 'id' for ClientReparto to be a number if it's SERIAL
-        const { error } = await supabase.from('ClientesReparto').update(data).eq('id', editingClientReparto.id as unknown as number);
+        const { error } = await supabase.from('clientesreparto').update(submissionData).eq('id', editingClientReparto.id);
         if (error) throw error;
         toast({ title: "Cliente de Reparto Actualizado", description: "El cliente ha sido actualizado con éxito." });
       } else {
-        const { error } = await supabase.from('ClientesReparto').insert([data]);
+        const { error } = await supabase.from('clientesreparto').insert([submissionData]);
         if (error) throw error;
         toast({ title: "Cliente de Reparto Creado", description: "El nuevo cliente ha sido creado con éxito." });
       }
@@ -94,7 +117,7 @@ export default function ClientesRepartoPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      const { error } = await supabase.from('ClientesReparto').delete().eq('id', id);
+      const { error } = await supabase.from('clientesreparto').delete().eq('id', id);
       if (error) throw error;
       fetchData();
       toast({ title: "Cliente de Reparto Eliminado", description: "El cliente ha sido eliminado.", variant: "destructive" });
@@ -113,8 +136,6 @@ export default function ClientesRepartoPage() {
     setEditingClientReparto(null);
     setIsDialogOpen(true);
   };
-
-  const getClienteNuestroName = (id: string) => clientesNuestros.find(cn => cn.id === id)?.nombre || 'N/A';
 
   return (
     <>
@@ -153,7 +174,7 @@ export default function ClientesRepartoPage() {
                 <TableRow key={client.id}>
                   <TableCell className="font-medium">{client.nombre}</TableCell>
                   <TableCell>{client.direccion}</TableCell>
-                  <TableCell>{getClienteNuestroName(client.cliente_nuestro_id)}</TableCell>
+                  <TableCell>{client.clientesnuestros?.nombre || 'N/A'}</TableCell>
                   <TableCell>{client.tipo_reparto ? client.tipo_reparto.charAt(0).toUpperCase() + client.tipo_reparto.slice(1) : '-'}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">

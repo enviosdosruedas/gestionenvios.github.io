@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -20,7 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
-import { Zone } from '@/lib/types';
+import type { Zone } from '@/lib/types';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -62,7 +63,10 @@ export default function ZonesPage() {
   const fetchZones = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.from('zonas').select('*').order('nombre', { ascending: true });
+      const { data, error } = await supabase
+        .from('zonas')
+        .select('id, nombre, created_at, updated_at')
+        .order('nombre', { ascending: true });
       if (error) throw error;
       setZones(data || []);
     } catch (error: any) {

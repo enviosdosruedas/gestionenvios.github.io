@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -20,7 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
-import { Client, Zone, ClientService, DayOfWeek, ALL_SERVICES, ALL_DAYS } from '@/lib/types';
+import type { ClienteNuestro, Zone, ClientService, DayOfWeek } from '@/lib/types'; // Changed Client to ClienteNuestro
+import { ALL_SERVICES, ALL_DAYS } from '@/lib/types';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -53,19 +55,19 @@ const clientSchema = z.object({
   direccion_retiro: z.string().optional().nullable(),
   servicios: z.array(z.string()).min(1, 'Seleccione al menos un servicio'),
   dias_de_reparto: z.array(z.string()).min(1, 'Seleccione al menos un día de reparto'),
-  zona_id: z.string().min(1, 'La zona es requerida'),
+  zona_id: z.string().uuid('La zona es requerida'),
   otros_detalles: z.string().optional().nullable(),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<ClienteNuestro[]>([]); // Changed Client to ClienteNuestro
   const [zones, setZones] = useState<Zone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [editingClient, setEditingClient] = useState<ClienteNuestro | null>(null); // Changed Client to ClienteNuestro
   const { toast } = useToast();
 
   const form = useForm<ClientFormData>({
@@ -84,8 +86,21 @@ export default function ClientsPage() {
     setIsLoading(true);
     try {
       const [clientsRes, zonesRes] = await Promise.all([
-        supabase.from('clientesnuestros').select('*').order('nombre', { ascending: true }),
-        supabase.from('zonas').select('*').order('nombre', { ascending: true })
+        supabase.from('clientesnuestros')
+          .select(`
+            id,
+            nombre,
+            direccion_retiro,
+            servicios,
+            dias_de_reparto,
+            zona_id,
+            otros_detalles,
+            created_at,
+            updated_at,
+            zonas (nombre) 
+          `)
+          .order('nombre', { ascending: true }),
+        supabase.from('zonas').select('id, nombre').order('nombre', { ascending: true })
       ]);
 
       if (clientsRes.error) throw clientsRes.error;
@@ -111,8 +126,8 @@ export default function ClientsPage() {
       form.reset({
         nombre: editingClient.nombre,
         direccion_retiro: editingClient.direccion_retiro || '',
-        servicios: editingClient.servicios as string[],
-        dias_de_reparto: editingClient.dias_de_reparto as string[],
+        servicios: editingClient.servicios as string[], // Keep as string[] for form
+        dias_de_reparto: editingClient.dias_de_reparto as string[], // Keep as string[] for form
         zona_id: editingClient.zona_id,
         otros_detalles: editingClient.otros_detalles || '',
       });
@@ -132,6 +147,7 @@ export default function ClientsPage() {
     setIsSubmitting(true);
     const submissionData = {
       ...data,
+      // Ensure arrays are correctly typed for Supabase, even if form uses string[]
       servicios: data.servicios as ClientService[],
       dias_de_reparto: data.dias_de_reparto as DayOfWeek[],
       direccion_retiro: data.direccion_retiro || null,
@@ -171,7 +187,7 @@ export default function ClientsPage() {
     }
   };
   
-  const openEditDialog = (client: Client) => {
+  const openEditDialog = (client: ClienteNuestro) => { // Changed Client to ClienteNuestro
     setEditingClient(client);
     setIsDialogOpen(true);
   };
@@ -189,8 +205,6 @@ export default function ClientsPage() {
     setIsDialogOpen(true);
   };
 
-  const getZoneName = (zoneId: string) => zones.find(z => z.id === zoneId)?.nombre || 'N/A';
-
   return (
     <>
       <PageHeader
@@ -207,7 +221,7 @@ export default function ClientsPage() {
         <CardContent className="p-0">
            {isLoading ? (
             <div className="p-4 space-y-2">
-              {[...Array(5)].map((_, i) => ( // Show more skeletons for a typically longer table
+              {[...Array(5)].map((_, i) => ( 
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
@@ -239,7 +253,7 @@ export default function ClientsPage() {
                         {client.dias_de_reparto.map(d => <Badge key={d} variant="outline">{d.charAt(0).toUpperCase() + d.slice(1)}</Badge>)}
                      </div>
                   </TableCell>
-                  <TableCell>{getZoneName(client.zona_id)}</TableCell>
+                  <TableCell>{client.zonas?.nombre || 'N/A'}</TableCell>
                   <TableCell>{client.otros_detalles || '-'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(client)} disabled={isSubmitting}>

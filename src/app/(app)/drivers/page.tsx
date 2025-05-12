@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -20,7 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
-import { Driver, ALL_DRIVER_STATUSES } from '@/lib/types';
+import type { Driver } from '@/lib/types'; 
+import { ALL_DRIVER_STATUSES } from '@/lib/types';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -81,14 +83,16 @@ export default function DriversPage() {
   const fetchDrivers = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.from('repartidores').select('*').order('nombre', { ascending: true });
+      const { data, error } = await supabase
+        .from('repartidores')
+        .select('id, nombre, identificacion, contacto, tipo_vehiculo, patente, status, created_at, updated_at')
+        .order('nombre', { ascending: true });
       if (error) throw error;
       setDrivers(data || []);
     } catch (error: any) {
       const userMessage = error?.message || "No se pudieron cargar los repartidores. Intente más tarde.";
       toast({ title: "Error al cargar repartidores", description: userMessage, variant: "destructive" });
 
-      // Improved console logging
       if (error?.message) {
         console.error("Error fetching drivers:", error.message, "Raw error object:", error);
       } else {
@@ -128,7 +132,6 @@ export default function DriversPage() {
 
   const onSubmit = async (data: DriverFormData) => {
     setIsSubmitting(true);
-    // Ensure optional fields are null if empty string, matching Supabase expectations for potentially nullable text fields
     const submissionData = {
         ...data,
         identificacion: data.identificacion || null,

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -20,7 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
-import { Delivery, Driver, Zone, Stop, ALL_DELIVERY_STATUSES } from '@/lib/types';
+import type { Delivery, Driver, Zone } from '@/lib/types';
+import { ALL_DELIVERY_STATUSES } from '@/lib/types';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -54,9 +56,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const deliverySchema = z.object({
   fecha: z.date({ required_error: 'La fecha es requerida.' }),
-  repartidor_id: z.string().min(1, 'Seleccione un repartidor.'),
-  zona_id: z.string().min(1, 'Seleccione una zona.'),
-  paradas: z.string().min(1, 'Ingrese los IDs de las paradas (separados por coma).'), // Parsed to string[]
+  repartidor_id: z.string().uuid('Seleccione un repartidor.'),
+  zona_id: z.string().uuid('Seleccione una zona.'),
+  paradas: z.string().min(1, 'Ingrese los IDs de las paradas (separados por coma).'), 
   tanda: z.coerce.number().int().min(1, 'La tanda debe ser un número positivo.'),
   estado_entrega: z.enum(ALL_DELIVERY_STATUSES),
 });
@@ -65,10 +67,9 @@ type DeliveryFormData = z.infer<typeof deliverySchema>;
 
 export default function DeliveriesPage() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [zones, setZones] = useState<Zone[]>([]);
-  // const [stops, setStops] = useState<Stop[]>([]); // If needed for richer display/selection
-
+  const [drivers, setDrivers] = useState<Pick<Driver, 'id' | 'nombre' | 'status'>[]>([]);
+  const [zones, setZones] = useState<Pick<Zone, 'id' | 'nombre'>[]>([]);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -90,11 +91,24 @@ export default function DeliveriesPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [deliveriesRes, driversRes, zonesRes /*, stopsRes */] = await Promise.all([
-        supabase.from('repartos').select('*').order('fecha', { ascending: false }),
-        supabase.from('repartidores').select('*').order('nombre'),
-        supabase.from('zonas').select('*').order('nombre'),
-        // supabase.from('paradas').select('*') // Fetch if needed
+      const [deliveriesRes, driversRes, zonesRes] = await Promise.all([
+        supabase.from('repartos')
+          .select(`
+            id,
+            fecha,
+            repartidor_id,
+            paradas,
+            zona_id,
+            tanda,
+            estado_entrega,
+            created_at,
+            updated_at,
+            repartidores (nombre),
+            zonas (nombre)
+          `)
+          .order('fecha', { ascending: false }),
+        supabase.from('repartidores').select('id, nombre, status').order('nombre'),
+        supabase.from('zonas').select('id, nombre').order('nombre'),
       ]);
 
       if (deliveriesRes.error) throw deliveriesRes.error;
@@ -106,9 +120,6 @@ export default function DeliveriesPage() {
       if (zonesRes.error) throw zonesRes.error;
       setZones(zonesRes.data || []);
       
-      // if (stopsRes.error) throw stopsRes.error;
-      // setStops(stopsRes.data || []);
-
     } catch (error: any) {
       toast({ title: "Error al cargar datos", description: error.message || "No se pudieron cargar los datos necesarios.", variant: "destructive" });
       console.error("Error fetching data:", error);
@@ -126,7 +137,7 @@ export default function DeliveriesPage() {
       form.reset({
         ...editingDelivery,
         fecha: typeof editingDelivery.fecha === 'string' ? parseISO(editingDelivery.fecha) : editingDelivery.fecha,
-        paradas: editingDelivery.paradas.join(', '),
+        paradas: editingDelivery.paradas.join(', '), // Convert array to comma-separated string for form
       });
     } else {
       form.reset({
@@ -144,8 +155,8 @@ export default function DeliveriesPage() {
     setIsSubmitting(true);
     const submissionData = {
       ...data,
-      fecha: format(data.fecha, 'yyyy-MM-dd'), // Format date for Supabase
-      paradas: data.paradas.split(',').map(s => s.trim()).filter(s => s),
+      fecha: format(data.fecha, 'yyyy-MM-dd'),
+      paradas: data.paradas.split(',').map(s => s.trim()).filter(s => s), // Convert string to array of UUIDs
     };
 
     try {
@@ -199,9 +210,6 @@ export default function DeliveriesPage() {
     setIsDialogOpen(true);
   };
 
-  const getDriverName = (id: string) => drivers.find(d => d.id === id)?.nombre || 'N/A';
-  const getZoneName = (id: string) => zones.find(z => z.id === id)?.nombre || 'N/A';
-
   return (
     <>
       <PageHeader
@@ -239,8 +247,8 @@ export default function DeliveriesPage() {
               {deliveries.map((delivery) => (
                 <TableRow key={delivery.id}>
                   <TableCell>{format(typeof delivery.fecha === 'string' ? parseISO(delivery.fecha) : delivery.fecha, 'PPP', { locale: es })}</TableCell>
-                  <TableCell>{getDriverName(delivery.repartidor_id)}</TableCell>
-                  <TableCell>{getZoneName(delivery.zona_id)}</TableCell>
+                  <TableCell>{delivery.repartidores?.nombre || 'N/A'}</TableCell>
+                  <TableCell>{delivery.zonas?.nombre || 'N/A'}</TableCell>
                   <TableCell>{delivery.tanda}</TableCell>
                   <TableCell>{delivery.paradas.length}</TableCell>
                   <TableCell>
