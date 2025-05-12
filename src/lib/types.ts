@@ -1,5 +1,4 @@
 
-
 export type ClientService = "reparto viandas" | "mensajería" | "delivery" | "otros";
 export type DayOfWeek = "lunes" | "martes" | "miércoles" | "jueves" | "viernes" | "sábado" | "domingo";
 export type FrecuenciaParada = "diario" | "lunes, miércoles y viernes" | "semanal (especificar semana)" | "único";
@@ -56,7 +55,7 @@ export interface DetalleReparto {
   id: string; // UUID
   reparto_id: string; // UUID
   cliente_reparto_id: number; // INTEGER, FK to ClientesReparto.id
-  clientesreparto?: Pick<ClientReparto, 'nombre' | 'direccion'>; // For eager loading
+  clientesreparto?: Pick<ClientReparto, 'id' | 'nombre' | 'direccion' | 'horario_inicio' | 'horario_fin' | 'restricciones'>;
   valor_entrega?: number | null; // NUMERIC
   detalle_entrega?: string | null; // TEXT
   orden_visita: number; // INTEGER
@@ -130,9 +129,9 @@ export const ALL_SERVICES: ClientService[] = ["reparto viandas", "mensajería", 
 export const ALL_DAYS: DayOfWeek[] = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
 export const ALL_FRECUENCIAS_PARADA: FrecuenciaParada[] = ["diario", "lunes, miércoles y viernes", "semanal (especificar semana)", "único"];
 export const ALL_DRIVER_STATUSES: DriverStatus[] = ["activo", "inactivo"];
-export const ALL_DELIVERY_STATUSES: DeliveryStatus[] = ["pendiente", "en curso", "entregado", "cancelado", "reprogramado"];
-export const ALL_PRODUCT_STATUSES: ProductStatus[] = ["disponible", "agotado", "descontinuado"];
-export const ALL_TIPO_REPARTO_CLIENTE: TipoRepartoCliente[] = ["diario", "semanal", "quincenal"];
+export const ALL_DELIVERY_STATUSES: DeliveryStatus[] = ["pendiente", "en curso" | "entregado" | "cancelado" | "reprogramado"];
+export const ALL_PRODUCT_STATUSES: ProductStatus[] = ["disponible", "agotado" | "descontinuado"];
+export const ALL_TIPO_REPARTO_CLIENTE: TipoRepartoCliente[] = ["diario", "semanal" | "quincenal"];
 
 // Keeping old ALL_FREQUENCIES if it's used elsewhere, but new one is ALL_FREQUENCIES_PARADA
 export const ALL_FREQUENCIES: FrecuenciaParada[] = ["diario", "lunes, miércoles y viernes", "semanal (especificar semana)", "único"];

@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -103,5 +104,60 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@media print {
+  body {
+    font-size: 10pt;
+    color: black !important; /* Ensure text is black for printing */
+    background-color: white !important; /* Ensure background is white */
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  .print\:p-0 {
+    padding: 0 !important;
+  }
+  .print\:shadow-none {
+    box-shadow: none !important;
+  }
+  .print\:border-none {
+    border: none !important;
+  }
+  /* Hide sidebar and other non-essential UI elements */
+  aside[data-sidebar="sidebar"], 
+  button[data-sidebar="trigger"], 
+  button[data-sidebar="rail"],
+  header.sticky { /* Assuming header is the one in AppLayout */
+    display: none !important;
+  }
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .page-header-actions { /* Add this class to the actions div in PageHeader if you want to hide it */
+    display: none !important;
+  }
+  /* Ensure cards and tables print well */
+  .card {
+    border: 1px solid #ccc !important; /* Light border for cards in print */
+    page-break-inside: avoid;
+  }
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  th, td {
+    border: 1px solid #ddd !important;
+    padding: 4px !important;
+    text-align: left !important;
+  }
+  th {
+    background-color: #f2f2f2 !important; /* Light grey for table headers */
+  }
+  /* Remove ShadCN UI Card default padding for print if needed */
+  .card-content.p-0.print\:p-0 {
+     padding: 0 !important;
   }
 }

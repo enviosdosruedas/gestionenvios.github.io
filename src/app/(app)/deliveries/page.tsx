@@ -1,7 +1,9 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { PlusCircle, Edit, Trash2, CalendarIcon, Loader2, Trash } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, CalendarIcon, Loader2, Trash, FileText } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -54,7 +56,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const detalleRepartoSchema = z.object({
-  id: z.string().optional(), // for existing items during edit
+  id: z.string().uuid().optional(), // for existing items during edit
   cliente_reparto_id: z.coerce.number().min(1, 'Seleccione un cliente de reparto.'),
   valor_entrega: z.coerce.number().positive('El valor debe ser positivo.').optional().nullable(),
   detalle_entrega: z.string().optional().nullable(),
@@ -68,7 +70,7 @@ const detalleRepartoSchema = z.object({
 const deliverySchema = z.object({
   fecha: z.date({ required_error: 'La fecha es requerida.' }),
   repartidor_id: z.string().uuid('Seleccione un repartidor.'),
-  cliente_nuestro_id: z.string().uuid("Seleccione un cliente principal.").nullable(),
+  cliente_nuestro_id: z.string().uuid("Seleccione un cliente principal.").nullable().optional(),
   zona_id: z.string().uuid('Seleccione una zona para el reparto general.'),
   tanda: z.coerce.number().int().min(1, 'La tanda debe ser un número positivo.'),
   estado_entrega: z.enum(ALL_DELIVERY_STATUSES),
@@ -172,7 +174,11 @@ export default function DeliveriesPage() {
           `)
           .order('fecha', { ascending: false }); 
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error (Repartos):", error);
+        throw new Error(`Error al cargar repartos: ${error.message} (Código: ${error.code})`);
+      }
+
 
       if (data) {
         const processedData = data.map(d => ({
@@ -190,7 +196,6 @@ export default function DeliveriesPage() {
       const userMessage = error?.message || "No se pudieron cargar los repartos. Intente más tarde.";
       toast({ title: "Error al cargar repartos", description: userMessage, variant: "destructive" });
 
-      // Improved console logging
       if (error?.message) {
         console.error("Error fetching deliveries:", error.message, "Raw error object:", error);
       } else {
@@ -233,7 +238,7 @@ export default function DeliveriesPage() {
       form.reset({
         ...editingDelivery,
         fecha: typeof editingDelivery.fecha === 'string' ? parseISO(editingDelivery.fecha) : editingDelivery.fecha,
-        cliente_nuestro_id: editingDelivery.clientesnuestros?.id || null,
+        cliente_nuestro_id: editingDelivery.cliente_nuestro_id || null,
         detalles_reparto: editingDelivery.detalles_reparto?.map(d => ({
           id: d.id, 
           cliente_reparto_id: d.cliente_reparto_id,
@@ -242,8 +247,8 @@ export default function DeliveriesPage() {
           orden_visita: d.orden_visita,
         })) || [],
       });
-      if (editingDelivery.clientesnuestros?.id) {
-        fetchClientesRepartoForClienteNuestro(editingDelivery.clientesnuestros.id);
+      if (editingDelivery.cliente_nuestro_id) {
+        fetchClientesRepartoForClienteNuestro(editingDelivery.cliente_nuestro_id);
       }
     } else {
       form.reset({
@@ -335,14 +340,12 @@ export default function DeliveriesPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      // First delete related details
       const { error: deleteDetailsError } = await supabase
         .from('detallesreparto')
         .delete()
         .eq('reparto_id', id);
       if (deleteDetailsError) throw deleteDetailsError;
       
-      // Then delete the main delivery
       const { error } = await supabase.from('repartos').delete().eq('id', id);
       if (error) throw error;
       
@@ -423,6 +426,7 @@ export default function DeliveriesPage() {
                 <TableHead>Tanda</TableHead>
                 <TableHead>Items</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead>Reporte</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -449,11 +453,18 @@ export default function DeliveriesPage() {
                       {delivery.estado_entrega.charAt(0).toUpperCase() + delivery.estado_entrega.slice(1)}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <Link href={`/deliveries/${delivery.id}/report`} passHref legacyBehavior>
+                      <Button variant="outline" size="icon" aria-label="Ver Reporte">
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(delivery)} disabled={isSubmitting}>
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(delivery)} disabled={isSubmitting} aria-label="Editar Reparto">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(delivery.id)} disabled={isSubmitting}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(delivery.id)} disabled={isSubmitting} aria-label="Eliminar Reparto">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -537,6 +548,7 @@ export default function DeliveriesPage() {
                         >
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar cliente principal" /></SelectTrigger></FormControl>
                         <SelectContent>
+                          <SelectItem value="">Sin cliente principal</SelectItem>
                             {clientesNuestros.map((cliente) => (
                             <SelectItem key={cliente.id} value={cliente.id}>{cliente.nombre}</SelectItem>
                             ))}
@@ -581,11 +593,11 @@ export default function DeliveriesPage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Estado de Entrega</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value as string} disabled={isSubmitting}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger></FormControl>
                         <SelectContent>
-                            {ALL_DELIVERY_STATUSES.map((status) => (
-                            <SelectItem key={status} value={status}> {status.charAt(0).toUpperCase() + status.slice(1)}</SelectItem>
+                            {ALL_DELIVERY_STATUSES.map((statusValue) => (
+                            <SelectItem key={statusValue} value={statusValue}> {statusValue.charAt(0).toUpperCase() + statusValue.slice(1)}</SelectItem>
                             ))}
                         </SelectContent>
                         </Select>
