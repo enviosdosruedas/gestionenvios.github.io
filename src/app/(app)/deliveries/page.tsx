@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { PlusCircle, Edit, Trash2, CalendarIcon, Loader2, ChevronsUpDown, Trash } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, CalendarIcon, Loader2, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -36,7 +35,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-// import { Textarea } from '@/components/ui/textarea'; // No longer using the main paradas textarea
 import {
   Select,
   SelectContent,
@@ -57,13 +55,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const detalleRepartoSchema = z.object({
   id: z.string().optional(), // for existing items during edit
-  cliente_reparto_id: z.coerce.number().min(1, 'Seleccione un cliente de reparto.'), // Changed to coerce.number()
+  cliente_reparto_id: z.coerce.number().min(1, 'Seleccione un cliente de reparto.'),
   valor_entrega: z.coerce.number().positive('El valor debe ser positivo.').optional().nullable(),
   detalle_entrega: z.string().optional().nullable(),
   orden_visita: z.number().int(),
 }).refine(data => data.valor_entrega != null || (data.detalle_entrega != null && data.detalle_entrega.trim() !== ''), {
   message: "Debe ingresar un valor o un detalle para la entrega.",
-  path: ["detalle_entrega"], // Apply error to one field, or make it a form-level error
+  path: ["detalle_entrega"], 
 });
 
 
@@ -78,7 +76,6 @@ const deliverySchema = z.object({
 });
 
 type DeliveryFormData = z.infer<typeof deliverySchema>;
-type DetalleRepartoFormData = z.infer<typeof detalleRepartoSchema>;
 
 export default function DeliveriesPage() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
@@ -106,10 +103,10 @@ export default function DeliveriesPage() {
     },
   });
 
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "detalles_reparto",
-    keyName: "fieldId" // Use a custom key name to avoid conflicts with 'id' from data
+    keyName: "fieldId" 
   });
 
   const selectedClienteNuestroId = form.watch("cliente_nuestro_id");
@@ -132,7 +129,7 @@ export default function DeliveriesPage() {
       if (clientesNuestrosRes.error) throw clientesNuestrosRes.error;
       setClientesNuestros(clientesNuestrosRes.data || []);
       
-      await fetchDeliveries(); // Fetch deliveries after other dependent data
+      await fetchDeliveries(); 
       
     } catch (error: any) {
       const userMessage = error?.message || "No se pudieron cargar los datos necesarios. Intente más tarde.";
@@ -172,12 +169,22 @@ export default function DeliveriesPage() {
               clientesreparto (nombre, direccion)
             )
           `)
-          .order('fecha', { ascending: false })
-          .order('orden_visita', { referencedTable: 'detallesreparto', ascending: true });
-
+          .order('fecha', { ascending: false }); // Removed ordering by detallesreparto.orden_visita
 
       if (error) throw error;
-       setDeliveries(data.map(d => ({...d, detalles_reparto: d.detallesreparto as DetalleReparto[]})) || []);
+
+      if (data) {
+        const processedData = data.map(d => ({
+          ...d,
+          detalles_reparto: d.detallesreparto 
+            ? (d.detallesreparto as DetalleReparto[]).sort((a, b) => a.orden_visita - b.orden_visita) 
+            : [],
+        })) as Delivery[];
+        setDeliveries(processedData);
+      } else {
+        setDeliveries([]);
+      }
+
     } catch (error: any) {
       const userMessage = error?.message || "No se pudieron cargar los repartos. Intente más tarde.";
       toast({ title: "Error al cargar repartos", description: userMessage, variant: "destructive" });
@@ -422,8 +429,8 @@ export default function DeliveriesPage() {
                         variant={delivery.estado_entrega === 'entregado' ? 'default' : (delivery.estado_entrega === 'en curso' ? 'secondary' : 'outline')}
                         className={cn(
                             {'bg-green-500 text-primary-foreground': delivery.estado_entrega === 'entregado'},
-                            {'bg-polynesian-blue-500 text-primary-foreground': delivery.estado_entrega === 'en curso'},
-                            {'bg-mikado-yellow-500 text-secondary-foreground': delivery.estado_entrega === 'pendiente'},
+                            {'bg-polynesian-blue-500 text-primary-foreground': delivery.estado_entrega === 'en curso'}, // Using Polynesian Blue for "en curso"
+                            {'bg-mikado-yellow-500 text-secondary-foreground': delivery.estado_entrega === 'pendiente'}, // Using Mikado Yellow for "pendiente"
                             {'bg-red-500 text-destructive-foreground': delivery.estado_entrega === 'cancelado'},
                             {'bg-purple-500 text-primary-foreground': delivery.estado_entrega === 'reprogramado'}
                         )}
@@ -567,7 +574,7 @@ export default function DeliveriesPage() {
                         <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger></FormControl>
                         <SelectContent>
-                            {ALL_DELIVERY_STATUSES.map((status: DeliveryStatus) => ( // Explicitly type status
+                            {ALL_DELIVERY_STATUSES.map((status: DeliveryStatus) => (
                             <SelectItem key={status} value={status}> {status.charAt(0).toUpperCase() + status.slice(1)}</SelectItem>
                             ))}
                         </SelectContent>
