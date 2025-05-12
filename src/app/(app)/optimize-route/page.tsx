@@ -12,7 +12,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { optimizeRouteAction } from './actions';
 import { OptimizeRouteFormSchema, OptimizeRouteFormValues } from './optimize-route.schema'; 
-import type { OptimizeDeliveryRouteOutput, OptimizeDeliveryRouteInput } from '@/ai/flows/optimize-delivery-route'; 
+import type { OptimizeDeliveryRouteOutput } from '@/ai/flows/optimize-delivery-route'; 
 import { Loader2, PlusCircle, Trash2, RouteIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -50,7 +50,6 @@ export default function OptimizeRoutePage() {
       if (typeof result.error === 'string') {
         errorMessage = result.error;
       } else if (result.error && 'fieldErrors' in result.error) {
-         // If ZodError, extract field errors for more specific messages
         const fieldErrors = Object.values(result.error.fieldErrors).flat().join(' ');
         if (fieldErrors) errorMessage = `Errores de validación: ${fieldErrors}`;
         const formErrors = result.error.formErrors.join(' ');
@@ -79,15 +78,15 @@ export default function OptimizeRoutePage() {
                 <FormLabel>Paradas de Entrega</FormLabel>
                 <FormDescription className="mb-2">Añada todas las direcciones a visitar y su prioridad (mayor número = mayor prioridad).</FormDescription>
                 {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-end gap-2 mb-3 p-3 border rounded-md bg-background">
+                  <div key={field.id} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-background">
                     <FormField
                       control={form.control}
                       name={`stops.${index}.address`}
-                      render={({ field }) => (
-                        <FormItem className="flex-grow">
+                      render={({ field: formField }) => ( // Renamed field to avoid conflict
+                        <FormItem className="flex-grow w-full sm:w-auto">
                            {index === 0 && <FormLabel className="text-xs">Dirección</FormLabel>}
                           <FormControl>
-                            <Input placeholder="Ej: Av. Colón 1234, Mar del Plata" {...field} />
+                            <Input placeholder="Ej: Av. Colón 1234, Mar del Plata" {...formField} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -96,21 +95,23 @@ export default function OptimizeRoutePage() {
                     <FormField
                       control={form.control}
                       name={`stops.${index}.priority`}
-                      render={({ field }) => (
-                        <FormItem className="w-24">
+                      render={({ field: formField }) => ( // Renamed field to avoid conflict
+                        <FormItem className="w-full sm:w-24">
                            {index === 0 && <FormLabel className="text-xs">Prioridad</FormLabel>}
                           <FormControl>
-                            <Input type="number" min="1" placeholder="1" {...field} />
+                            <Input type="number" min="1" placeholder="1" {...formField} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    {fields.length > 1 && (
-                      <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <div className="self-start sm:self-end">
+                      {fields.length > 1 && (
+                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
                 <Button
