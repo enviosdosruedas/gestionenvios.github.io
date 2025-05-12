@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -45,26 +45,23 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabaseClient';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const productSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
-  descripcion: z.string().optional(),
-  categoria: z.string().optional(),
+  descripcion: z.string().optional().nullable(),
+  categoria: z.string().optional().nullable(),
   precio: z.coerce.number().min(0, 'El precio debe ser positivo o cero'),
   estado: z.enum(ALL_PRODUCT_STATUSES),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
 
-// Mock data
-const initialProducts: Product[] = [
-  { id: 'prod1-uuid', nombre: 'Vianda Pollo con Arroz', categoria: 'Viandas Clásicas', precio: 1200, estado: 'disponible' },
-  { id: 'prod2-uuid', nombre: 'Vianda Vegetariana', descripcion: 'Lentejas con vegetales salteados.', categoria: 'Viandas Vegetarianas', precio: 1100, estado: 'disponible' },
-  { id: 'prod3-uuid', nombre: 'Milanesa con Puré', categoria: 'Viandas Clásicas', precio: 1350, estado: 'agotado' },
-];
-
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const { toast } = useToast();
@@ -80,9 +77,33 @@ export default function ProductsPage() {
     },
   });
 
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.from('Productos').select('*').order('nombre', { ascending: true });
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error: any) {
+      toast({ title: "Error al cargar productos", description: error.message || "No se pudieron cargar los productos.", variant: "destructive" });
+      console.error("Error fetching products:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
  useEffect(() => {
     if (editingProduct) {
-      form.reset(editingProduct);
+      form.reset({
+        nombre: editingProduct.nombre,
+        descripcion: editingProduct.descripcion || '',
+        categoria: editingProduct.categoria || '',
+        precio: editingProduct.precio,
+        estado: editingProduct.estado,
+      });
     } else {
       form.reset({
         nombre: '',
@@ -94,23 +115,45 @@ export default function ProductsPage() {
     }
   }, [editingProduct, form, isDialogOpen]);
 
-  const onSubmit = (data: ProductFormData) => {
-    if (editingProduct) {
-      setProducts(
-        products.map((p) => (p.id === editingProduct.id ? { ...editingProduct, ...data } : p))
-      );
-      toast({ title: "Producto Actualizado", description: "El producto ha sido actualizado con éxito." });
-    } else {
-      setProducts([...products, { id: `uuid-${Date.now().toString()}`, ...data }]);
-      toast({ title: "Producto Creado", description: "El nuevo producto ha sido creado con éxito." });
+  const onSubmit = async (data: ProductFormData) => {
+    setIsSubmitting(true);
+    const submissionData = {
+        ...data,
+        descripcion: data.descripcion || null,
+        categoria: data.categoria || null,
+    };
+
+    try {
+      if (editingProduct) {
+        const { error } = await supabase.from('Productos').update(submissionData).eq('id', editingProduct.id);
+        if (error) throw error;
+        toast({ title: "Producto Actualizado", description: "El producto ha sido actualizado con éxito." });
+      } else {
+        const { error } = await supabase.from('Productos').insert([submissionData]);
+        if (error) throw error;
+        toast({ title: "Producto Creado", description: "El nuevo producto ha sido creado con éxito." });
+      }
+      fetchProducts();
+      setEditingProduct(null);
+      setIsDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: "Error al guardar", description: error.message || "Ocurrió un error al guardar el producto.", variant: "destructive" });
+      console.error("Error submitting product:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-    setEditingProduct(null);
-    setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setProducts(products.filter((p) => p.id !== id));
-    toast({ title: "Producto Eliminado", description: "El producto ha sido eliminado.", variant: "destructive" });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase.from('Productos').delete().eq('id', id);
+      if (error) throw error;
+      fetchProducts();
+      toast({ title: "Producto Eliminado", description: "El producto ha sido eliminado.", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Error al eliminar", description: error.message || "Ocurrió un error al eliminar el producto.", variant: "destructive" });
+      console.error("Error deleting product:", error);
+    }
   };
   
   const openEditDialog = (product: Product) => {
@@ -144,50 +187,58 @@ export default function ProductsPage() {
       />
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Precio</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.nombre}</TableCell>
-                  <TableCell>{product.categoria || '-'}</TableCell>
-                  <TableCell>${product.precio.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Badge 
-                        variant={product.estado === 'disponible' ? 'default' : (product.estado === 'agotado' ? 'destructive' : 'secondary')}
-                        className={cn(
-                            {'bg-green-500 text-primary-foreground': product.estado === 'disponible'},
-                            {'bg-orange-500 text-primary-foreground': product.estado === 'agotado'},
-                            {'bg-gray-500 text-primary-foreground': product.estado === 'descontinuado'}
-                        )}
-                    >
-                      {product.estado.charAt(0).toUpperCase() + product.estado.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+          {isLoading ? (
+             <div className="p-4 space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead>Precio</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell className="font-medium">{product.nombre}</TableCell>
+                    <TableCell>{product.categoria || '-'}</TableCell>
+                    <TableCell>${product.precio.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge 
+                          variant={product.estado === 'disponible' ? 'default' : (product.estado === 'agotado' ? 'destructive' : 'secondary')}
+                          className={cn(
+                              {'bg-green-500 text-primary-foreground': product.estado === 'disponible'},
+                              {'bg-orange-500 text-primary-foreground': product.estado === 'agotado'},
+                              {'bg-gray-500 text-primary-foreground': product.estado === 'descontinuado'}
+                          )}
+                      >
+                        {product.estado.charAt(0).toUpperCase() + product.estado.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)} disabled={isSubmitting}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)} disabled={isSubmitting}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
             <DialogTitle>{editingProduct ? 'Editar' : 'Nuevo'} Producto</DialogTitle>
@@ -201,7 +252,7 @@ export default function ProductsPage() {
                   <FormItem>
                     <FormLabel>Nombre del Producto</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej: Vianda de Pollo" {...field} />
+                      <Input placeholder="Ej: Vianda de Pollo" {...field} disabled={isSubmitting}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -214,7 +265,7 @@ export default function ProductsPage() {
                   <FormItem>
                     <FormLabel>Descripción (Opcional)</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Ej: Pollo grillado con ensalada fresca." {...field} value={field.value || ''} />
+                      <Textarea placeholder="Ej: Pollo grillado con ensalada fresca." {...field} value={field.value || ''} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -228,7 +279,7 @@ export default function ProductsPage() {
                     <FormItem>
                       <FormLabel>Categoría (Opcional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: Viandas Light" {...field} value={field.value || ''} />
+                        <Input placeholder="Ej: Viandas Light" {...field} value={field.value || ''} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -241,7 +292,7 @@ export default function ProductsPage() {
                     <FormItem>
                       <FormLabel>Precio</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="Ej: 1500.00" {...field} />
+                        <Input type="number" step="0.01" placeholder="Ej: 1500.00" {...field} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -254,7 +305,7 @@ export default function ProductsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Estado</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar estado" />
@@ -274,9 +325,12 @@ export default function ProductsPage() {
               />
               <DialogFooter>
                  <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancelar</Button>
+                    <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
                  </DialogClose>
-                <Button type="submit">Guardar Producto</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Guardar Producto
+                </Button>
               </DialogFooter>
             </form>
           </Form>

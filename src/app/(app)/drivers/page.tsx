@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -44,26 +44,24 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabaseClient';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const driverSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
-  identificacion: z.string().optional(),
-  contacto: z.string().optional(),
-  tipo_vehiculo: z.string().optional(),
-  patente: z.string().optional(),
+  identificacion: z.string().optional().nullable(),
+  contacto: z.string().optional().nullable(),
+  tipo_vehiculo: z.string().optional().nullable(),
+  patente: z.string().optional().nullable(),
   status: z.enum(ALL_DRIVER_STATUSES),
 });
 
 type DriverFormData = z.infer<typeof driverSchema>;
 
-// Mock data - replace with API calls
-const initialDrivers: Driver[] = [
-  { id: '1', nombre: 'Juan Perez', contacto: '123456789', tipo_vehiculo: 'Moto', patente: 'ABC 123', status: 'activo' },
-  { id: '2', nombre: 'Maria Lopez', contacto: '987654321', tipo_vehiculo: 'Auto', patente: 'DEF 456', status: 'inactivo' },
-];
-
 export default function DriversPage() {
-  const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const { toast } = useToast();
@@ -80,9 +78,34 @@ export default function DriversPage() {
     },
   });
   
+  const fetchDrivers = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.from('Repartidores').select('*').order('nombre', { ascending: true });
+      if (error) throw error;
+      setDrivers(data || []);
+    } catch (error: any) {
+      toast({ title: "Error al cargar repartidores", description: error.message || "No se pudieron cargar los repartidores.", variant: "destructive" });
+      console.error("Error fetching drivers:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDrivers();
+  }, []);
+
   useEffect(() => {
     if (editingDriver) {
-      form.reset(editingDriver);
+      form.reset({
+        nombre: editingDriver.nombre,
+        identificacion: editingDriver.identificacion || '',
+        contacto: editingDriver.contacto || '',
+        tipo_vehiculo: editingDriver.tipo_vehiculo || '',
+        patente: editingDriver.patente || '',
+        status: editingDriver.status,
+      });
     } else {
       form.reset({
         nombre: '',
@@ -96,23 +119,48 @@ export default function DriversPage() {
   }, [editingDriver, form, isDialogOpen]);
 
 
-  const onSubmit = (data: DriverFormData) => {
-    if (editingDriver) {
-      setDrivers(
-        drivers.map((d) => (d.id === editingDriver.id ? { ...editingDriver, ...data } : d))
-      );
-      toast({ title: "Repartidor Actualizado", description: "El repartidor ha sido actualizado con éxito." });
-    } else {
-      setDrivers([...drivers, { id: Date.now().toString(), ...data }]);
-      toast({ title: "Repartidor Creado", description: "El nuevo repartidor ha sido creado con éxito." });
+  const onSubmit = async (data: DriverFormData) => {
+    setIsSubmitting(true);
+    // Ensure optional fields are null if empty string, matching Supabase expectations for potentially nullable text fields
+    const submissionData = {
+        ...data,
+        identificacion: data.identificacion || null,
+        contacto: data.contacto || null,
+        tipo_vehiculo: data.tipo_vehiculo || null,
+        patente: data.patente || null,
+    };
+
+    try {
+      if (editingDriver) {
+        const { error } = await supabase.from('Repartidores').update(submissionData).eq('id', editingDriver.id);
+        if (error) throw error;
+        toast({ title: "Repartidor Actualizado", description: "El repartidor ha sido actualizado con éxito." });
+      } else {
+        const { error } = await supabase.from('Repartidores').insert([submissionData]);
+        if (error) throw error;
+        toast({ title: "Repartidor Creado", description: "El nuevo repartidor ha sido creado con éxito." });
+      }
+      fetchDrivers();
+      setEditingDriver(null);
+      setIsDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: "Error al guardar", description: error.message || "Ocurrió un error al guardar el repartidor.", variant: "destructive" });
+      console.error("Error submitting driver:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-    setEditingDriver(null);
-    setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setDrivers(drivers.filter((d) => d.id !== id));
-    toast({ title: "Repartidor Eliminado", description: "El repartidor ha sido eliminado.", variant: "destructive" });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase.from('Repartidores').delete().eq('id', id);
+      if (error) throw error;
+      fetchDrivers();
+      toast({ title: "Repartidor Eliminado", description: "El repartidor ha sido eliminado.", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Error al eliminar", description: error.message || "Ocurrió un error al eliminar el repartidor.", variant: "destructive" });
+      console.error("Error deleting driver:", error);
+    }
   };
 
   const openEditDialog = (driver: Driver) => {
@@ -148,53 +196,61 @@ export default function DriversPage() {
       />
       <Card className="shadow-lg">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Identificación</TableHead>
-                <TableHead>Contacto</TableHead>
-                <TableHead>Vehículo</TableHead>
-                <TableHead>Patente</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {drivers.map((driver) => (
-                <TableRow key={driver.id}>
-                  <TableCell className="font-medium">{driver.nombre}</TableCell>
-                  <TableCell>{driver.identificacion || '-'}</TableCell>
-                  <TableCell>{driver.contacto || '-'}</TableCell>
-                  <TableCell>{driver.tipo_vehiculo || '-'}</TableCell>
-                  <TableCell>{driver.patente || '-'}</TableCell>
-                  <TableCell>
-                    <Badge 
-                        variant={driver.status === 'activo' ? 'default' : 'secondary'} 
-                        className={cn(
-                            {'bg-green-500 text-primary-foreground': driver.status === 'activo'},
-                            {'bg-red-500 text-destructive-foreground': driver.status === 'inactivo'}
-                        )}
-                    >
-                      {driver.status.charAt(0).toUpperCase() + driver.status.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(driver)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(driver.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+          {isLoading ? (
+            <div className="p-4 space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Identificación</TableHead>
+                  <TableHead>Contacto</TableHead>
+                  <TableHead>Vehículo</TableHead>
+                  <TableHead>Patente</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {drivers.map((driver) => (
+                  <TableRow key={driver.id}>
+                    <TableCell className="font-medium">{driver.nombre}</TableCell>
+                    <TableCell>{driver.identificacion || '-'}</TableCell>
+                    <TableCell>{driver.contacto || '-'}</TableCell>
+                    <TableCell>{driver.tipo_vehiculo || '-'}</TableCell>
+                    <TableCell>{driver.patente || '-'}</TableCell>
+                    <TableCell>
+                      <Badge 
+                          variant={driver.status === 'activo' ? 'default' : 'secondary'} 
+                          className={cn(
+                              {'bg-green-500 text-primary-foreground': driver.status === 'activo'},
+                              {'bg-red-500 text-destructive-foreground': driver.status === 'inactivo'}
+                          )}
+                      >
+                        {driver.status.charAt(0).toUpperCase() + driver.status.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(driver)} disabled={isSubmitting}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(driver.id)} disabled={isSubmitting}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
             <DialogTitle>{editingDriver ? 'Editar' : 'Nuevo'} Repartidor</DialogTitle>
@@ -208,7 +264,7 @@ export default function DriversPage() {
                   <FormItem>
                     <FormLabel>Nombre Completo</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej: Carlos Rodriguez" {...field} />
+                      <Input placeholder="Ej: Carlos Rodriguez" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -222,7 +278,7 @@ export default function DriversPage() {
                     <FormItem>
                       <FormLabel>Identificación (DNI/CUIT)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: 20-12345678-9" {...field} value={field.value || ''} />
+                        <Input placeholder="Ej: 20-12345678-9" {...field} value={field.value || ''} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -235,7 +291,7 @@ export default function DriversPage() {
                     <FormItem>
                       <FormLabel>Contacto (Teléfono)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: 2235123456" {...field} value={field.value || ''} />
+                        <Input placeholder="Ej: 2235123456" {...field} value={field.value || ''} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -250,7 +306,7 @@ export default function DriversPage() {
                     <FormItem>
                       <FormLabel>Tipo de Vehículo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: Moto Honda Wave" {...field} value={field.value || ''} />
+                        <Input placeholder="Ej: Moto Honda Wave" {...field} value={field.value || ''} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -263,7 +319,7 @@ export default function DriversPage() {
                     <FormItem>
                       <FormLabel>Patente</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: AE123FZ" {...field} value={field.value || ''} />
+                        <Input placeholder="Ej: AE123FZ" {...field} value={field.value || ''} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -276,7 +332,7 @@ export default function DriversPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar status" />
@@ -296,9 +352,12 @@ export default function DriversPage() {
               />
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button" variant="outline">Cancelar</Button>
+                  <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
                 </DialogClose>
-                <Button type="submit">Guardar Repartidor</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Guardar Repartidor
+                </Button>
               </DialogFooter>
             </form>
           </Form>

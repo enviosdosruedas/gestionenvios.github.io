@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -45,33 +45,25 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { supabase } from '@/lib/supabaseClient';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const clientSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
+  direccion_retiro: z.string().optional().nullable(),
   servicios: z.array(z.string()).min(1, 'Seleccione al menos un servicio'),
   dias_de_reparto: z.array(z.string()).min(1, 'Seleccione al menos un día de reparto'),
-  zona_id: z.string().min(1, 'La zona es requerida'), // Assuming this will be a Zone ID
-  otros_detalles: z.string().optional(),
+  zona_id: z.string().min(1, 'La zona es requerida'),
+  otros_detalles: z.string().optional().nullable(),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;
 
-// Mock data - replace with API calls
-const initialClients: Client[] = [
-  { id: '1', nombre: 'Empresa Alfa', servicios: ['reparto viandas', 'delivery'], dias_de_reparto: ['lunes', 'miércoles', 'viernes'], zona_id: 'zona1', otros_detalles: 'Entregar en recepción' },
-  { id: '2', nombre: 'Particular Beta', servicios: ['mensajería'], dias_de_reparto: ['martes', 'jueves'], zona_id: 'zona2', otros_detalles: 'Cliente frecuente' },
-];
-
-const mockZones: Zone[] = [
-  { id: 'zona1', nombre: 'Centro' },
-  { id: 'zona2', nombre: 'Sur' },
-  { id: 'zona3', nombre: 'Norte' },
-];
-
-
 export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>(initialClients);
-  const [zones, setZones] = useState<Zone[]>(mockZones);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const { toast } = useToast();
@@ -80,6 +72,7 @@ export default function ClientsPage() {
     resolver: zodResolver(clientSchema),
     defaultValues: {
       nombre: '',
+      direccion_retiro: '',
       servicios: [],
       dias_de_reparto: [],
       zona_id: '',
@@ -87,10 +80,37 @@ export default function ClientsPage() {
     },
   });
 
+  const fetchClientsAndZones = async () => {
+    setIsLoading(true);
+    try {
+      const [clientsRes, zonesRes] = await Promise.all([
+        supabase.from('ClientesNuestros').select('*').order('nombre', { ascending: true }),
+        supabase.from('Zonas').select('*').order('nombre', { ascending: true })
+      ]);
+
+      if (clientsRes.error) throw clientsRes.error;
+      setClients(clientsRes.data || []);
+
+      if (zonesRes.error) throw zonesRes.error;
+      setZones(zonesRes.data || []);
+
+    } catch (error: any) {
+      toast({ title: "Error al cargar datos", description: error.message || "No se pudieron cargar clientes o zonas.", variant: "destructive" });
+      console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClientsAndZones();
+  }, []);
+
   useEffect(() => {
     if (editingClient) {
       form.reset({
         nombre: editingClient.nombre,
+        direccion_retiro: editingClient.direccion_retiro || '',
         servicios: editingClient.servicios as string[],
         dias_de_reparto: editingClient.dias_de_reparto as string[],
         zona_id: editingClient.zona_id,
@@ -99,6 +119,7 @@ export default function ClientsPage() {
     } else {
       form.reset({
         nombre: '',
+        direccion_retiro: '',
         servicios: [],
         dias_de_reparto: [],
         zona_id: '',
@@ -107,29 +128,47 @@ export default function ClientsPage() {
     }
   }, [editingClient, form, isDialogOpen]);
 
-  const onSubmit = (data: ClientFormData) => {
-    const clientData = {
+  const onSubmit = async (data: ClientFormData) => {
+    setIsSubmitting(true);
+    const submissionData = {
       ...data,
       servicios: data.servicios as ClientService[],
       dias_de_reparto: data.dias_de_reparto as DayOfWeek[],
+      direccion_retiro: data.direccion_retiro || null,
+      otros_detalles: data.otros_detalles || null,
     };
 
-    if (editingClient) {
-      setClients(
-        clients.map((c) => (c.id === editingClient.id ? { ...editingClient, ...clientData } : c))
-      );
-      toast({ title: "Cliente Actualizado", description: "El cliente ha sido actualizado con éxito." });
-    } else {
-      setClients([...clients, { id: Date.now().toString(), ...clientData }]);
-      toast({ title: "Cliente Creado", description: "El nuevo cliente ha sido creado con éxito." });
+    try {
+      if (editingClient) {
+        const { error } = await supabase.from('ClientesNuestros').update(submissionData).eq('id', editingClient.id);
+        if (error) throw error;
+        toast({ title: "Cliente Actualizado", description: "El cliente ha sido actualizado con éxito." });
+      } else {
+        const { error } = await supabase.from('ClientesNuestros').insert([submissionData]);
+        if (error) throw error;
+        toast({ title: "Cliente Creado", description: "El nuevo cliente ha sido creado con éxito." });
+      }
+      fetchClientsAndZones();
+      setEditingClient(null);
+      setIsDialogOpen(false);
+    } catch (error: any) {
+       toast({ title: "Error al guardar", description: error.message || "Ocurrió un error al guardar el cliente.", variant: "destructive" });
+       console.error("Error submitting client:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-    setEditingClient(null);
-    setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setClients(clients.filter((c) => c.id !== id));
-    toast({ title: "Cliente Eliminado", description: "El cliente ha sido eliminado.", variant: "destructive" });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase.from('ClientesNuestros').delete().eq('id', id);
+      if (error) throw error;
+      fetchClientsAndZones();
+      toast({ title: "Cliente Eliminado", description: "El cliente ha sido eliminado.", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Error al eliminar", description: error.message || "Ocurrió un error al eliminar el cliente.", variant: "destructive" });
+      console.error("Error deleting client:", error);
+    }
   };
   
   const openEditDialog = (client: Client) => {
@@ -141,6 +180,7 @@ export default function ClientsPage() {
     setEditingClient(null);
      form.reset({ 
         nombre: '',
+        direccion_retiro: '',
         servicios: [],
         dias_de_reparto: [],
         zona_id: '',
@@ -165,10 +205,18 @@ export default function ClientsPage() {
       />
       <Card>
         <CardContent className="p-0">
+           {isLoading ? (
+            <div className="p-4 space-y-2">
+              {[...Array(5)].map((_, i) => ( // Show more skeletons for a typically longer table
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Dirección Retiro</TableHead>
                 <TableHead>Servicios</TableHead>
                 <TableHead>Días de Reparto</TableHead>
                 <TableHead>Zona</TableHead>
@@ -180,6 +228,7 @@ export default function ClientsPage() {
               {clients.map((client) => (
                 <TableRow key={client.id}>
                   <TableCell className="font-medium">{client.nombre}</TableCell>
+                  <TableCell>{client.direccion_retiro || '-'}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {client.servicios.map(s => <Badge key={s} variant="secondary">{s}</Badge>)}
@@ -193,10 +242,10 @@ export default function ClientsPage() {
                   <TableCell>{getZoneName(client.zona_id)}</TableCell>
                   <TableCell>{client.otros_detalles || '-'}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(client)}>
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(client)} disabled={isSubmitting}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)} disabled={isSubmitting}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -204,10 +253,11 @@ export default function ClientsPage() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingClient ? 'Editar' : 'Nuevo'} Cliente</DialogTitle>
@@ -221,7 +271,20 @@ export default function ClientsPage() {
                   <FormItem>
                     <FormLabel>Nombre del Cliente</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej: Panadería La Espiga" {...field} />
+                      <Input placeholder="Ej: Panadería La Espiga" {...field} disabled={isSubmitting} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="direccion_retiro"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dirección de Retiro (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ej: Av. Libertad 3000" {...field} value={field.value || ''} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -247,14 +310,14 @@ export default function ClientsPage() {
                                 <Checkbox
                                   checked={field.value?.includes(service)}
                                   onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...(field.value || []), service])
-                                      : field.onChange(
-                                          (field.value || []).filter(
-                                            (value) => value !== service
-                                          )
+                                    const newValue = checked
+                                      ? [...(field.value || []), service]
+                                      : (field.value || []).filter(
+                                          (value) => value !== service
                                         );
+                                    field.onChange(newValue);
                                   }}
+                                  disabled={isSubmitting}
                                 />
                               </FormControl>
                               <FormLabel className="font-normal">
@@ -290,14 +353,14 @@ export default function ClientsPage() {
                                 <Checkbox
                                   checked={field.value?.includes(day)}
                                   onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...(field.value || []), day])
-                                      : field.onChange(
-                                          (field.value || []).filter(
-                                            (value) => value !== day
-                                          )
+                                    const newValue = checked
+                                      ? [...(field.value || []), day]
+                                      : (field.value || []).filter(
+                                          (value) => value !== day
                                         );
+                                    field.onChange(newValue);
                                   }}
+                                  disabled={isSubmitting}
                                 />
                               </FormControl>
                               <FormLabel className="font-normal">
@@ -320,7 +383,7 @@ export default function ClientsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Zona de Entrega</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar zona" />
@@ -346,7 +409,7 @@ export default function ClientsPage() {
                   <FormItem>
                     <FormLabel>Otros Detalles / Notas Generales</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Ej: Cliente VIP, requiere factura A." {...field} />
+                      <Textarea placeholder="Ej: Cliente VIP, requiere factura A." {...field} value={field.value || ''} disabled={isSubmitting}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -355,9 +418,12 @@ export default function ClientsPage() {
 
               <DialogFooter>
                  <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancelar</Button>
+                    <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
                  </DialogClose>
-                <Button type="submit">Guardar Cliente</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Guardar Cliente
+                </Button>
               </DialogFooter>
             </form>
           </Form>

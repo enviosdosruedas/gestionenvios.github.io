@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -35,25 +35,19 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
+import { supabase } from '@/lib/supabaseClient';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const zoneSchema = z.object({
   nombre: z.string().min(1, 'El nombre de la zona es requerido'),
-  // id is generated, not part of form
 });
 
 type ZoneFormData = z.infer<typeof zoneSchema>;
 
-// Mock data
-const initialZones: Zone[] = [
-  { id: 'zona1-uuid', nombre: 'Centro' },
-  { id: 'zona2-uuid', nombre: 'Sur' },
-  { id: 'zona3-uuid', nombre: 'Norte - La Perla' },
-  { id: 'zona4-uuid', nombre: 'Puerto' },
-  { id: 'zona5-uuid', nombre: 'Chauvin - Los Troncos' },
-];
-
 export default function ZonesPage() {
-  const [zones, setZones] = useState<Zone[]>(initialZones);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
   const { toast } = useToast();
@@ -65,6 +59,24 @@ export default function ZonesPage() {
     },
   });
 
+  const fetchZones = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.from('Zonas').select('*').order('nombre', { ascending: true });
+      if (error) throw error;
+      setZones(data || []);
+    } catch (error: any) {
+      toast({ title: "Error al cargar zonas", description: error.message || "No se pudieron cargar las zonas.", variant: "destructive" });
+      console.error("Error fetching zones:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchZones();
+  }, []);
+
   useEffect(() => {
     if (editingZone) {
       form.reset({ nombre: editingZone.nombre });
@@ -73,24 +85,39 @@ export default function ZonesPage() {
     }
   }, [editingZone, form, isDialogOpen]);
 
-  const onSubmit = (data: ZoneFormData) => {
-    if (editingZone) {
-      setZones(
-        zones.map((z) => (z.id === editingZone.id ? { ...editingZone, ...data } : z))
-      );
-      toast({ title: "Zona Actualizada", description: "La zona ha sido actualizada con éxito." });
-    } else {
-      // In a real app, ID would come from Supabase
-      setZones([...zones, { id: `uuid-${Date.now().toString()}`, ...data }]);
-      toast({ title: "Zona Creada", description: "La nueva zona ha sido creada con éxito." });
+  const onSubmit = async (data: ZoneFormData) => {
+    setIsSubmitting(true);
+    try {
+      if (editingZone) {
+        const { error } = await supabase.from('Zonas').update(data).eq('id', editingZone.id);
+        if (error) throw error;
+        toast({ title: "Zona Actualizada", description: "La zona ha sido actualizada con éxito." });
+      } else {
+        const { error } = await supabase.from('Zonas').insert([data]);
+        if (error) throw error;
+        toast({ title: "Zona Creada", description: "La nueva zona ha sido creada con éxito." });
+      }
+      fetchZones();
+      setEditingZone(null);
+      setIsDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: "Error al guardar", description: error.message || "Ocurrió un error al guardar la zona.", variant: "destructive" });
+      console.error("Error submitting zone:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-    setEditingZone(null);
-    setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setZones(zones.filter((z) => z.id !== id));
-     toast({ title: "Zona Eliminada", description: "La zona ha sido eliminada.", variant: "destructive" });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase.from('Zonas').delete().eq('id', id);
+      if (error) throw error;
+      fetchZones();
+      toast({ title: "Zona Eliminada", description: "La zona ha sido eliminada.", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Error al eliminar", description: error.message || "Ocurrió un error al eliminar la zona.", variant: "destructive" });
+      console.error("Error deleting zone:", error);
+    }
   };
 
   const openEditDialog = (zone: Zone) => {
@@ -119,35 +146,43 @@ export default function ZonesPage() {
       />
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Nombre de la Zona</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {zones.map((zone) => (
-                <TableRow key={zone.id}>
-                  <TableCell className="font-mono text-xs">{zone.id}</TableCell>
-                  <TableCell className="font-medium">{zone.nombre}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(zone)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(zone.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+          {isLoading ? (
+            <div className="p-4 space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Nombre de la Zona</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {zones.map((zone) => (
+                  <TableRow key={zone.id}>
+                    <TableCell className="font-mono text-xs">{zone.id}</TableCell>
+                    <TableCell className="font-medium">{zone.nombre}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(zone)} disabled={isSubmitting}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(zone.id)} disabled={isSubmitting}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{editingZone ? 'Editar' : 'Nueva'} Zona</DialogTitle>
@@ -161,7 +196,7 @@ export default function ZonesPage() {
                   <FormItem>
                     <FormLabel>Nombre de la Zona</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej: Macrocentro" {...field} />
+                      <Input placeholder="Ej: Macrocentro" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -169,9 +204,12 @@ export default function ZonesPage() {
               />
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button" variant="outline">Cancelar</Button>
+                  <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
                 </DialogClose>
-                <Button type="submit">Guardar Zona</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Guardar Zona
+                </Button>
               </DialogFooter>
             </form>
           </Form>

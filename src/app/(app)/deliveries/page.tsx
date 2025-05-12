@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Edit, Trash2, CalendarIcon } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -43,49 +43,34 @@ import {
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabaseClient';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const deliverySchema = z.object({
   fecha: z.date({ required_error: 'La fecha es requerida.' }),
   repartidor_id: z.string().min(1, 'Seleccione un repartidor.'),
-  zona_id: z.string().min(1, 'Seleccione una zona.'), // Assuming this will be a Zone ID
-  paradas: z.string().min(1, 'Ingrese los IDs de las paradas (separados por coma).'), // Will be parsed to string[]
+  zona_id: z.string().min(1, 'Seleccione una zona.'),
+  paradas: z.string().min(1, 'Ingrese los IDs de las paradas (separados por coma).'), // Parsed to string[]
   tanda: z.coerce.number().int().min(1, 'La tanda debe ser un número positivo.'),
   estado_entrega: z.enum(ALL_DELIVERY_STATUSES),
 });
 
 type DeliveryFormData = z.infer<typeof deliverySchema>;
 
-// Mock data
-const initialDeliveries: Delivery[] = [
-  { id: '1', fecha: new Date(), repartidor_id: 'driver1', paradas: ['stop1-uuid', 'stop2-uuid'], zona_id: 'zonaA', tanda: 1, estado_entrega: 'en curso' },
-  { id: '2', fecha: new Date(new Date().setDate(new Date().getDate() -1)), repartidor_id: 'driver2', paradas: ['stop3-uuid'], zona_id: 'zonaB', tanda: 1, estado_entrega: 'entregado' },
-];
-const mockDrivers: Driver[] = [
-  { id: 'driver1', nombre: 'Carlos Sainz', status: 'activo' },
-  { id: 'driver2', nombre: 'Lucia Fernandez', status: 'activo' },
-];
-const mockZones: Zone[] = [
-  { id: 'zonaA', nombre: 'Centro Histórico' },
-  { id: 'zonaB', nombre: 'Barrio Residencial Norte' },
-];
-// Mock stops for display purposes or selection (not directly part of Delivery schema, but related)
-const mockStops: Stop[] = [
-    { id: 'stop1-uuid', cliente_id: 'client1', direccion: 'Calle Falsa 123', horario_inicio: '09:00', horario_fin: '12:00', frecuencia: 'diario', zona_id: 'zonaA' },
-    { id: 'stop2-uuid', cliente_id: 'client2', direccion: 'Av. Siempreviva 742', horario_inicio: '10:00', horario_fin: '13:00', frecuencia: 'diario', zona_id: 'zonaA' },
-    { id: 'stop3-uuid', cliente_id: 'client3', direccion: 'Pje. Particular 456', horario_inicio: '14:00', horario_fin: '17:00', frecuencia: 'diario', zona_id: 'zonaB' },
-];
-
-
 export default function DeliveriesPage() {
-  const [deliveries, setDeliveries] = useState<Delivery[]>(initialDeliveries);
-  const [drivers, setDrivers] = useState<Driver[]>(mockDrivers);
-  const [zones, setZones] = useState<Zone[]>(mockZones);
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
+  // const [stops, setStops] = useState<Stop[]>([]); // If needed for richer display/selection
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
   const { toast } = useToast();
@@ -102,11 +87,46 @@ export default function DeliveriesPage() {
     },
   });
 
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [deliveriesRes, driversRes, zonesRes /*, stopsRes */] = await Promise.all([
+        supabase.from('Repartos').select('*').order('fecha', { ascending: false }),
+        supabase.from('Repartidores').select('*').order('nombre'),
+        supabase.from('Zonas').select('*').order('nombre'),
+        // supabase.from('Paradas').select('*') // Fetch if needed
+      ]);
+
+      if (deliveriesRes.error) throw deliveriesRes.error;
+      setDeliveries(deliveriesRes.data || []);
+
+      if (driversRes.error) throw driversRes.error;
+      setDrivers(driversRes.data || []);
+
+      if (zonesRes.error) throw zonesRes.error;
+      setZones(zonesRes.data || []);
+      
+      // if (stopsRes.error) throw stopsRes.error;
+      // setStops(stopsRes.data || []);
+
+    } catch (error: any) {
+      toast({ title: "Error al cargar datos", description: error.message || "No se pudieron cargar los datos necesarios.", variant: "destructive" });
+      console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   useEffect(() => {
     if (editingDelivery) {
       form.reset({
         ...editingDelivery,
-        paradas: editingDelivery.paradas.join(', '), // Convert array to string for textarea
+        fecha: typeof editingDelivery.fecha === 'string' ? parseISO(editingDelivery.fecha) : editingDelivery.fecha,
+        paradas: editingDelivery.paradas.join(', '),
       });
     } else {
       form.reset({
@@ -120,27 +140,45 @@ export default function DeliveriesPage() {
     }
   }, [editingDelivery, form, isDialogOpen]);
 
-  const onSubmit = (data: DeliveryFormData) => {
-    const deliveryData = {
+  const onSubmit = async (data: DeliveryFormData) => {
+    setIsSubmitting(true);
+    const submissionData = {
       ...data,
-      paradas: data.paradas.split(',').map(s => s.trim()).filter(s => s), // Convert string to array of UUIDs
+      fecha: format(data.fecha, 'yyyy-MM-dd'), // Format date for Supabase
+      paradas: data.paradas.split(',').map(s => s.trim()).filter(s => s),
     };
-    if (editingDelivery) {
-      setDeliveries(
-        deliveries.map((d) => (d.id === editingDelivery.id ? { ...editingDelivery, ...deliveryData } : d))
-      );
-      toast({ title: "Reparto Actualizado", description: "El reparto ha sido actualizado con éxito." });
-    } else {
-      setDeliveries([...deliveries, { id: Date.now().toString(), ...deliveryData }]);
-      toast({ title: "Reparto Creado", description: "El nuevo reparto ha sido creado con éxito." });
+
+    try {
+      if (editingDelivery) {
+        const { error } = await supabase.from('Repartos').update(submissionData).eq('id', editingDelivery.id);
+        if (error) throw error;
+        toast({ title: "Reparto Actualizado", description: "El reparto ha sido actualizado con éxito." });
+      } else {
+        const { error } = await supabase.from('Repartos').insert([submissionData]);
+        if (error) throw error;
+        toast({ title: "Reparto Creado", description: "El nuevo reparto ha sido creado con éxito." });
+      }
+      fetchData();
+      setEditingDelivery(null);
+      setIsDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: "Error al guardar", description: error.message || "Ocurrió un error al guardar el reparto.", variant: "destructive" });
+      console.error("Error submitting delivery:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-    setEditingDelivery(null);
-    setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setDeliveries(deliveries.filter((d) => d.id !== id));
-    toast({ title: "Reparto Eliminado", description: "El reparto ha sido eliminado.", variant: "destructive" });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase.from('Repartos').delete().eq('id', id);
+      if (error) throw error;
+      fetchData();
+      toast({ title: "Reparto Eliminado", description: "El reparto ha sido eliminado.", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Error al eliminar", description: error.message || "Ocurrió un error al eliminar el reparto.", variant: "destructive" });
+      console.error("Error deleting delivery:", error);
+    }
   };
   
   const openEditDialog = (delivery: Delivery) => {
@@ -178,6 +216,13 @@ export default function DeliveriesPage() {
       />
       <Card>
         <CardContent className="p-0">
+          {isLoading ? (
+             <div className="p-4 space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -193,7 +238,7 @@ export default function DeliveriesPage() {
             <TableBody>
               {deliveries.map((delivery) => (
                 <TableRow key={delivery.id}>
-                  <TableCell>{format(delivery.fecha, 'PPP', { locale: es })}</TableCell>
+                  <TableCell>{format(typeof delivery.fecha === 'string' ? parseISO(delivery.fecha) : delivery.fecha, 'PPP', { locale: es })}</TableCell>
                   <TableCell>{getDriverName(delivery.repartidor_id)}</TableCell>
                   <TableCell>{getZoneName(delivery.zona_id)}</TableCell>
                   <TableCell>{delivery.tanda}</TableCell>
@@ -203,20 +248,20 @@ export default function DeliveriesPage() {
                         variant={delivery.estado_entrega === 'entregado' ? 'default' : (delivery.estado_entrega === 'en curso' ? 'secondary' : 'outline')}
                         className={cn(
                             {'bg-green-500 text-primary-foreground': delivery.estado_entrega === 'entregado'},
-                            {'bg-polynesian-blue-500 text-primary-foreground': delivery.estado_entrega === 'en curso'}, // Using a blue from palette
-                            {'bg-mikado-yellow-500 text-secondary-foreground': delivery.estado_entrega === 'pendiente'}, // Using yellow from palette
+                            {'bg-polynesian-blue-500 text-primary-foreground': delivery.estado_entrega === 'en curso'},
+                            {'bg-mikado-yellow-500 text-secondary-foreground': delivery.estado_entrega === 'pendiente'},
                             {'bg-red-500 text-destructive-foreground': delivery.estado_entrega === 'cancelado'},
-                            {'bg-purple-500 text-primary-foreground': delivery.estado_entrega === 'reprogramado'} // custom color for reprogramado
+                            {'bg-purple-500 text-primary-foreground': delivery.estado_entrega === 'reprogramado'}
                         )}
                     >
                       {delivery.estado_entrega.charAt(0).toUpperCase() + delivery.estado_entrega.slice(1)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(delivery)}>
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(delivery)} disabled={isSubmitting}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(delivery.id)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(delivery.id)} disabled={isSubmitting}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -224,10 +269,11 @@ export default function DeliveriesPage() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsDialogOpen(open)}}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDelivery ? 'Editar' : 'Nuevo'} Reparto</DialogTitle>
@@ -249,6 +295,7 @@ export default function DeliveriesPage() {
                               "w-full pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
+                            disabled={isSubmitting}
                           >
                             {field.value ? (
                               format(field.value, "PPP", { locale: es })
@@ -264,9 +311,7 @@ export default function DeliveriesPage() {
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) =>
-                            date < new Date(new Date().setDate(new Date().getDate() -1)) // Allow today and future
-                          }
+                          disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1)) || isSubmitting }
                           initialFocus
                           locale={es}
                         />
@@ -282,7 +327,7 @@ export default function DeliveriesPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Repartidor Asignado</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Seleccionar repartidor" /></SelectTrigger>
                       </FormControl>
@@ -302,7 +347,7 @@ export default function DeliveriesPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Zona de Reparto</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Seleccionar zona" /></SelectTrigger>
                       </FormControl>
@@ -323,7 +368,7 @@ export default function DeliveriesPage() {
                   <FormItem>
                     <FormLabel>Paradas (IDs de Parada, ordenados y separados por coma)</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Ej: uuid-stop1, uuid-stop3, uuid-stop2" {...field} />
+                      <Textarea placeholder="Ej: uuid-stop1, uuid-stop3, uuid-stop2" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -337,7 +382,7 @@ export default function DeliveriesPage() {
                     <FormItem>
                         <FormLabel>Tanda de Entrega</FormLabel>
                         <FormControl>
-                        <Input type="number" min="1" placeholder="Ej: 1" {...field} />
+                        <Input type="number" min="1" placeholder="Ej: 1" {...field} disabled={isSubmitting}/>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -349,7 +394,7 @@ export default function DeliveriesPage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Estado de Entrega</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isSubmitting}>
                         <FormControl>
                             <SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
                         </FormControl>
@@ -368,9 +413,12 @@ export default function DeliveriesPage() {
                </div>
               <DialogFooter>
                 <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancelar</Button>
+                    <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
                 </DialogClose>
-                <Button type="submit">Guardar Reparto</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Guardar Reparto
+                </Button>
               </DialogFooter>
             </form>
           </Form>

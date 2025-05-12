@@ -6,10 +6,13 @@ export type FrecuenciaParada = "diario" | "lunes, miércoles y viernes" | "seman
 export interface Client {
   id: string; // UUID
   nombre: string;
+  direccion_retiro?: string; // Added from schema update
   servicios: ClientService[];
   dias_de_reparto: DayOfWeek[];
-  zona_id: string; // Changed from 'zona' to 'zona_id' assuming it's a foreign key UUID. Spec said "zona (Texto, referencia a Zonas)"
+  zona_id: string; 
   otros_detalles?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Paradas
@@ -20,8 +23,10 @@ export interface Stop {
   horario_inicio: string; // Time, format "HH:MM" or "HH:MM:SS"
   horario_fin: string; // Time, format "HH:MM" or "HH:MM:SS"
   frecuencia: FrecuenciaParada;
-  zona_id: string; // Changed from 'zona' to 'zona_id'. Spec said "zona (Texto, referencia a Zonas)"
+  zona_id: string; 
   notas_adicionales?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export type DriverStatus = "activo" | "inactivo";
@@ -34,24 +39,30 @@ export interface Driver {
   tipo_vehiculo?: string;
   patente?: string;
   status: DriverStatus;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export type DeliveryStatus = "pendiente" | "en curso" | "entregado" | "cancelado" | "reprogramado";
 // Repartos
 export interface Delivery {
   id: string; // UUID
-  fecha: Date; // Date
+  fecha: string | Date; // Date - can be string from DB or Date object in form
   repartidor_id: string; // UUID, foreign key to Driver
   paradas: string[]; // Array of Stop UUIDs
-  zona_id: string; // Changed from 'zona' to 'zona_id'. Spec said "zona (Texto, referencia a Zonas)"
+  zona_id: string; 
   tanda: number; // Integer
   estado_entrega: DeliveryStatus;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Zonas
 export interface Zone {
   id: string; // UUID
   nombre: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export type ProductStatus = "disponible" | "agotado" | "descontinuado";
@@ -62,6 +73,8 @@ export interface Product {
   categoria?: string;
   precio: number;
   estado: ProductStatus;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // For Route Optimization form (seems okay, separate from DB entities for now)
