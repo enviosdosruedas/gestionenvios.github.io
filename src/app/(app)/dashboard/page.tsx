@@ -1,0 +1,164 @@
+
+'use client';
+
+import { PageHeader } from "@/components/shared/page-header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Truck, Users, MapPin, ShoppingBag, RouteIcon, PackageSearch, Hourglass, Activity, ShieldCheck, AlertTriangle, ClipboardList } from "lucide-react";
+import Link from "next/link";
+
+const dailyKpiCards = [
+  { title: "Repartos de Hoy", value: "25", icon: PackageSearch, description: "Total programados" },
+  { title: "Entregas Pendientes", value: "8", icon: Hourglass, description: "Por completar hoy" },
+  { title: "Repartidores Activos", value: "10", icon: Truck, description: "Listos para operar" },
+  { title: "Incidentes Hoy", value: "1", icon: AlertTriangle, description: "Requiere atención", variant: "destructive" as const },
+];
+
+const generalKpiCards = [
+  { title: "Clientes Totales", value: "87", icon: Users, href: "/clients", description: "Ver lista de clientes" },
+  { title: "Zonas Cubiertas", value: "5", icon: MapPin, href: "/zones", description: "Administrar zonas" },
+  { title: "Productos Activos", value: "30+", icon: ShoppingBag, href: "/products", description: "Catálogo de productos" },
+];
+
+
+export default function DashboardPage() {
+  return (
+    <div className="container mx-auto py-2">
+      <PageHeader
+        title="Dashboard General del Día"
+        description="Resumen de la operación y accesos directos para Viandas Express Admin."
+      />
+
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold text-foreground mb-4">Actividad de Hoy</h2>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {dailyKpiCards.map((card) => (
+            <Card key={card.title} className={`shadow-lg hover:shadow-xl transition-shadow duration-300 ${card.variant === 'destructive' ? 'border-destructive bg-destructive/10' : ''}`}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className={`text-sm font-medium ${card.variant === 'destructive' ? 'text-destructive' : 'text-primary'}`}>
+                  {card.title}
+                </CardTitle>
+                <card.icon className={`h-5 w-5 ${card.variant === 'destructive' ? 'text-destructive' : 'text-muted-foreground'}`} />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-3xl font-bold ${card.variant === 'destructive' ? 'text-destructive' : 'text-foreground'}`}>{card.value}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {card.description}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+      
+      <div className="grid gap-8 md:grid-cols-3">
+        <section className="md:col-span-1">
+          <Card className="shadow-lg h-full">
+            <CardHeader>
+              <CardTitle className="text-xl text-primary">Acciones Rápidas</CardTitle>
+              <CardDescription>Tareas comunes a un clic.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              <Button asChild variant="outline" className="w-full justify-start hover:bg-secondary/20">
+                <Link href="/deliveries">
+                  <ClipboardList className="mr-2 h-4 w-4 text-accent" />
+                  Ver Repartos de Hoy
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full justify-start hover:bg-secondary/20">
+                <Link href="/deliveries"> {/* Corrected href to point to deliveries list, form is inside page */}
+                  <Truck className="mr-2 h-4 w-4 text-accent" />
+                  Nuevo Reparto
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full justify-start hover:bg-secondary/20">
+                <Link href="/optimize-route">
+                  <RouteIcon className="mr-2 h-4 w-4 text-accent" />
+                  Optimizar Ruta
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full justify-start hover:bg-secondary/20">
+                <Link href="/clients"> {/* Corrected href to point to clients list, form is inside page */}
+                  <Users className="mr-2 h-4 w-4 text-accent" />
+                  Registrar Cliente
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="md:col-span-2">
+           <h2 className="text-xl font-semibold text-foreground mb-4">Información General</h2>
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3 mb-6">
+            {generalKpiCards.map((card) => (
+            <Card key={card.title} className="shadow-md hover:shadow-lg transition-shadow duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-primary">
+                    {card.title}
+                </CardTitle>
+                <card.icon className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                <div className="text-2xl font-bold text-foreground">{card.value}</div>
+                 <Link href={card.href} legacyBehavior>
+                    <a className="text-xs text-accent hover:underline mt-1">
+                    {card.description}
+                    </a>
+                </Link>
+                </CardContent>
+            </Card>
+            ))}
+          </div>
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl text-primary">Estado de la Operación</CardTitle>
+              <CardDescription>Monitoreo en tiempo real.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Repartos en Curso</p>
+                  <p className="text-xs text-muted-foreground">Entregas activas ahora mismo</p>
+                </div>
+                <div className="text-lg font-semibold text-polynesian-blue-600">5</div>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Repartidores Disponibles</p>
+                  <p className="text-xs text-muted-foreground">Listos para asignar nuevas tareas</p>
+                </div>
+                <div className="text-lg font-semibold text-green-600">7 / 10</div>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Alertas del Sistema</p>
+                  <p className="text-xs text-muted-foreground">Problemas o demoras detectadas</p>
+                </div>
+                <div className="text-lg font-semibold text-red-600">2</div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+
+       <section className="mt-8">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl text-primary">Próximas Funcionalidades</CardTitle>
+            <CardDescription>Mejoras en desarrollo para optimizar tu gestión.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc list-inside text-muted-foreground space-y-2">
+              <li>Integración de mapas para visualización de rutas en tiempo real.</li>
+              <li>Reportes avanzados y personalizables sobre rendimiento de entregas.</li>
+              <li>Sistema de notificaciones automáticas para clientes sobre el estado de sus pedidos.</li>
+              <li>Módulo de facturación simplificado para servicios de mensajería.</li>
+              <li>App móvil para repartidores con seguimiento GPS y confirmación de entrega.</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </section>
+    </div>
+  );
+}
+
