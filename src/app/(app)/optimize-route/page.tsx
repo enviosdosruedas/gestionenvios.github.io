@@ -95,7 +95,8 @@ export default function OptimizeRoutePage() {
             const { data: clientesRepartoData, error: clientesRepartoError } = await supabase
               .from('clientesreparto')
               .select('*')
-              .eq('cliente_nuestro_id', selectedReparto.clientesnuestros.id);
+              .eq('cliente_nuestro_id', selectedReparto.clientesnuestros.id)
+              .order('nombre', { ascending: true });
             if (clientesRepartoError) throw clientesRepartoError;
             setAvailableClientesReparto(clientesRepartoData || []);
           } catch (error: any) {
@@ -176,6 +177,7 @@ export default function OptimizeRoutePage() {
                               ID: {reparto.id.substring(0,6)}.. - Cliente: {reparto.clientesnuestros?.nombre || 'N/A'} - Repartidor: {reparto.repartidores?.nombre || 'N/A'} ({format(new Date(reparto.fecha), 'dd/MM/yy', {locale: es})})
                             </SelectItem>
                           ))}
+                           {ongoingDeliveries.length === 0 && !isLoadingContext && <SelectItem value="no-deliveries" disabled>No hay repartos en curso.</SelectItem>}
                         </SelectContent>
                       </Select>
                       <FormDescription>Establece el cliente principal y el punto de partida contextual.</FormDescription>
@@ -212,37 +214,84 @@ export default function OptimizeRoutePage() {
 
 
               <div>
-                <FormLabel>Nuevas Entregas a Planificar para: <span className="font-semibold">{selectedClienteNuestro?.nombre || "Cliente (seleccione reparto de referencia)"}</span></FormLabel>
+                <FormLabel>Nuevas Entregas a Planificar para: <span className="font-semibold">{selectedClienteNuestro?.nombre || "(seleccione reparto de referencia)"}</span></FormLabel>
                 <FormDescription className="mb-2">Añada las direcciones y prioridades. Todas las direcciones deben ser dentro de Mar del Plata.</FormDescription>
                 {fields.map((field, index) => (
-                  <div key={field.id} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-muted/30">
-                    <FormField
-                      control={form.control}
-                      name={`newDeliveries.${index}.address`}
-                      render={({ field: formField }) => ( 
-                        <FormItem className="flex-grow w-full sm:w-auto">
-                           {index === 0 && <FormLabel className="text-xs text-muted-foreground">Dirección</FormLabel>}
-                          <FormControl>
-                            <Input placeholder="Ej: Av. Colón 1234, Mar del Plata" {...formField} />
-                          </FormControl>
-                          <FormMessage />
+                  <div key={field.id} className="flex flex-col sm:flex-row sm:items-start gap-2 mb-3 p-3 border rounded-md bg-muted/30">
+                    <div className="flex-grow w-full space-y-1">
+                      {(index === 0 || fields.length > 1) && <FormLabel className="text-xs font-medium">Nueva Entrega #{index + 1}</FormLabel>}
+                      <div className="flex flex-col sm:flex-row gap-2 items-start">
+                        <FormItem className="w-full sm:flex-1">
+                           {index === 0 && <FormLabel className="text-xs text-muted-foreground sm:hidden">Elegir Cliente</FormLabel>}
+                          <Select
+                            onValueChange={(clienteRepartoId) => {
+                              const selectedCR = availableClientesReparto.find(cr => cr.id.toString() === clienteRepartoId);
+                              if (selectedCR) {
+                                form.setValue(`newDeliveries.${index}.address`, selectedCR.direccion);
+                              }
+                            }}
+                            disabled={availableClientesReparto.length === 0 || isLoadingContext || !selectedContextRepartoId}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Elegir cliente existente..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="manual_entry_placeholder" disabled>-- Escribir dirección --</SelectItem>
+                              {availableClientesReparto.map(cr => (
+                                <SelectItem key={cr.id} value={cr.id.toString()}>
+                                  {cr.nombre} ({cr.direccion.substring(0,20)}{cr.direccion.length > 20 ? '...' : ''})
+                                </SelectItem>
+                              ))}
+                              {availableClientesReparto.length === 0 && selectedContextRepartoId && (
+                                <SelectItem value="no_clients_for_main" disabled>
+                                  No hay clientes de reparto asociados.
+                                </SelectItem>
+                              )}
+                              {!selectedContextRepartoId && (
+                                <SelectItem value="no_main_client" disabled>
+                                  Seleccione reparto de referencia.
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
                         </FormItem>
-                      )}
-                    />
+
+                        <FormField
+                          control={form.control}
+                          name={`newDeliveries.${index}.address`}
+                          render={({ field: formField }) => (
+                            <FormItem className="w-full sm:flex-1">
+                              {index === 0 && <FormLabel className="text-xs text-muted-foreground sm:hidden">Dirección Manual</FormLabel>}
+                              <FormControl>
+                                <Input
+                                  placeholder="O escribir dirección manual"
+                                  {...formField}
+                                  disabled={!selectedContextRepartoId}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                    
                     <FormField
                       control={form.control}
                       name={`newDeliveries.${index}.priority`}
                       render={({ field: formField }) => ( 
-                        <FormItem className="w-full sm:w-24">
+                        <FormItem className="w-full sm:w-28 shrink-0">
                            {index === 0 && <FormLabel className="text-xs text-muted-foreground">Prioridad</FormLabel>}
                           <FormControl>
-                            <Input type="number" min="1" placeholder="1" {...formField} />
+                            <Input type="number" min="1" placeholder="1" {...formField} disabled={!selectedContextRepartoId} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <div className="self-start sm:self-end pt-1 sm:pt-0">
+                    <div className="self-start sm:self-center pt-1 sm:pt-0 sm:mt-3"> {/* Adjusted for alignment */}
                       {fields.length > 1 && (
                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} aria-label={`Eliminar parada ${index + 1}`} className="text-destructive hover:bg-destructive/10">
                           <Trash2 className="h-4 w-4" />
@@ -259,7 +308,7 @@ export default function OptimizeRoutePage() {
                   className="mt-2"
                   disabled={!selectedContextRepartoId}
                 >
-                  <PlusCircle className="mr-2 h-4 w-4" /> Añadir Parada
+                  <PlusCircle className="mr-2 h-4 w-4" /> Añadir Nueva Entrega
                 </Button>
                  <FormMessage>{form.formState.errors.newDeliveries?.message || form.formState.errors.newDeliveries?.root?.message}</FormMessage>
               </div>
