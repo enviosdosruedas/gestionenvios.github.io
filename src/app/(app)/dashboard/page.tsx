@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -11,11 +10,12 @@ import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 
-const dailyKpiCards = [
-  { title: "Repartos de Hoy", value: "25", icon: PackageSearch, description: "Total programados" },
-  { title: "Entregas Pendientes", value: "8", icon: Hourglass, description: "Por completar hoy" },
-  { title: "Repartidores Activos (Total)", value: "10", icon: Truck, description: "Listos para operar" }, // Will be dynamic
-  { title: "Incidentes Hoy", value: "1", icon: AlertTriangle, description: "Requiere atención", variant: "destructive" as const },
+// Initial static data for daily KPI cards, values will be updated dynamically
+const dailyKpiCardsData = [
+  { title: "Repartos de Hoy", icon: PackageSearch, description: "Total programados" },
+  { title: "Entregas Pendientes", icon: Hourglass, description: "Por completar hoy" },
+  { title: "Repartidores Activos (Total)", icon: Truck, description: "Listos para operar" },
+  { title: "Incidentes Hoy", icon: AlertTriangle, description: "Requiere atención", variant: "destructive" as const },
 ];
 
 const generalKpiCards = [
@@ -29,6 +29,8 @@ interface OperationalStatus {
   repartidoresActivos: number;
   totalRepartidores: number;
   alertasSistema: number;
+  repartosProgramadosHoy: number;
+  entregasPendientesHoy: number;
 }
 
 export default function DashboardPage() {
@@ -41,50 +43,67 @@ export default function DashboardPage() {
       try {
         const today = format(new Date(), 'yyyy-MM-dd');
 
-        const { data: repartosEnCursoData, error: repartosEnCursoError } = await supabase
-          .from('repartos')
-          .select('id', { count: 'exact' })
-          .eq('estado_entrega', 'en curso')
-          .eq('fecha', today);
-
-        if (repartosEnCursoError) throw repartosEnCursoError;
-
-        const { data: repartidoresActivosData, error: repartidoresActivosError } = await supabase
-          .from('repartidores')
-          .select('id', { count: 'exact' })
-          .eq('status', 'activo');
+        const [
+          repartosEnCursoRes,
+          repartidoresActivosRes,
+          totalRepartidoresRes,
+          alertasSistemaRes,
+          repartosProgramadosHoyRes,
+          entregasPendientesHoyRes
+        ] = await Promise.all([
+          supabase
+            .from('repartos')
+            .select('id', { count: 'exact' })
+            .eq('estado_entrega', 'en curso')
+            .eq('fecha', today),
+          supabase
+            .from('repartidores')
+            .select('id', { count: 'exact' })
+            .eq('status', 'activo'),
+          supabase
+            .from('repartidores')
+            .select('id', { count: 'exact' }),
+          supabase
+            .from('repartos')
+            .select('id', {count: 'exact'})
+            .eq('fecha', today)
+            .in('estado_entrega', ['cancelado', 'reprogramado']),
+          supabase // repartosProgramadosHoy
+            .from('repartos')
+            .select('id', { count: 'exact' })
+            .eq('fecha', today),
+          supabase // entregasPendientesHoy
+            .from('repartos')
+            .select('id', { count: 'exact' })
+            .eq('fecha', today)
+            .eq('estado_entrega', 'pendiente')
+        ]);
         
-        if (repartidoresActivosError) throw repartidoresActivosError;
-
-        const { data: totalRepartidoresData, error: totalRepartidoresError } = await supabase
-          .from('repartidores')
-          .select('id', { count: 'exact' });
-
-        if (totalRepartidoresError) throw totalRepartidoresError;
-        
-        const { data: alertasData, error: alertasError } = await supabase
-          .from('repartos')
-          .select('id', {count: 'exact'})
-          .eq('fecha', today)
-          .in('estado_entrega', ['cancelado', 'reprogramado']);
-
-        if (alertasError) throw alertasError;
+        if (repartosEnCursoRes.error) throw repartosEnCursoRes.error;
+        if (repartidoresActivosRes.error) throw repartidoresActivosRes.error;
+        if (totalRepartidoresRes.error) throw totalRepartidoresRes.error;
+        if (alertasSistemaRes.error) throw alertasSistemaRes.error;
+        if (repartosProgramadosHoyRes.error) throw repartosProgramadosHoyRes.error;
+        if (entregasPendientesHoyRes.error) throw entregasPendientesHoyRes.error;
 
         setOperationalStatus({
-          repartosEnCurso: repartosEnCursoData?.length || 0,
-          repartidoresActivos: repartidoresActivosData?.length || 0,
-          totalRepartidores: totalRepartidoresData?.length || 0,
-          alertasSistema: alertasData?.length || 0,
+          repartosEnCurso: repartosEnCursoRes.data?.length || 0,
+          repartidoresActivos: repartidoresActivosRes.data?.length || 0,
+          totalRepartidores: totalRepartidoresRes.data?.length || 0,
+          alertasSistema: alertasSistemaRes.data?.length || 0,
+          repartosProgramadosHoy: repartosProgramadosHoyRes.data?.length || 0,
+          entregasPendientesHoy: entregasPendientesHoyRes.data?.length || 0,
         });
 
       } catch (error) {
         console.error("Error fetching operational status:", error);
-        // Optionally set a default/error state for operationalStatus
         setOperationalStatus({
           repartosEnCurso: 0,
           repartidoresActivos: 0,
           totalRepartidores: 0,
           alertasSistema: 0,
+          repartosProgramadosHoy: 0,
+          entregasPendientesHoy: 0,
         });
       } finally {
         setIsLoadingStatus(false);
@@ -94,15 +113,27 @@ export default function DashboardPage() {
     fetchOperationalStatus();
   }, []);
 
-  // Update dynamic KPI card for active drivers
-  const updatedDailyKpiCards = dailyKpiCards.map(card => {
-    if (card.title === "Repartidores Activos (Total)") {
-      return {
-        ...card,
-        value: isLoadingStatus ? "..." : `${operationalStatus?.repartidoresActivos || 0} / ${operationalStatus?.totalRepartidores || 0}`,
-      };
+  const dailyKpiCards = dailyKpiCardsData.map(card => {
+    let value: string | number = "...";
+    if (!isLoadingStatus && operationalStatus) {
+      switch (card.title) {
+        case "Repartos de Hoy":
+          value = operationalStatus.repartosProgramadosHoy;
+          break;
+        case "Entregas Pendientes":
+          value = operationalStatus.entregasPendientesHoy;
+          break;
+        case "Repartidores Activos (Total)":
+          value = `${operationalStatus.repartidoresActivos} / ${operationalStatus.totalRepartidores}`;
+          break;
+        case "Incidentes Hoy":
+          value = operationalStatus.alertasSistema;
+          break;
+        default:
+          value = "..."; 
+      }
     }
-    return card;
+    return { ...card, value };
   });
 
 
@@ -116,7 +147,7 @@ export default function DashboardPage() {
       <section className="mb-8">
         <h2 className="text-xl font-semibold text-foreground mb-4">Actividad de Hoy</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {updatedDailyKpiCards.map((card) => (
+          {dailyKpiCards.map((card) => (
             <Card key={card.title} className={`shadow-lg hover:shadow-xl transition-shadow duration-300 ${card.variant === 'destructive' ? 'border-destructive bg-destructive/10' : ''}`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className={`text-sm font-medium ${card.variant === 'destructive' ? 'text-destructive' : 'text-primary'}`}>
@@ -125,7 +156,7 @@ export default function DashboardPage() {
                 <card.icon className={`h-5 w-5 ${card.variant === 'destructive' ? 'text-destructive' : 'text-muted-foreground'}`} />
               </CardHeader>
               <CardContent>
-                {isLoadingStatus && card.title === "Repartidores Activos (Total)" ? (
+                {isLoadingStatus ? (
                   <Skeleton className="h-8 w-20" />
                 ) : (
                   <div className={`text-3xl font-bold ${card.variant === 'destructive' ? 'text-destructive' : 'text-foreground'}`}>{card.value}</div>
@@ -249,3 +280,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
