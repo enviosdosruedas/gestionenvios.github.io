@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -21,14 +20,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/page-header';
-import { Client, Zone, ClientService, DayOfWeek, ALL_SERVICES, ALL_DAYS, ALL_FREQUENCIES } from '@/lib/types';
+import { Client, Zone, ClientService, DayOfWeek, ALL_SERVICES, ALL_DAYS } from '@/lib/types';
 import { z } from 'zod';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -52,21 +50,16 @@ const clientSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
   servicios: z.array(z.string()).min(1, 'Seleccione al menos un servicio'),
   dias_de_reparto: z.array(z.string()).min(1, 'Seleccione al menos un día de reparto'),
-  zona_id: z.string().min(1, 'La zona es requerida'),
+  zona_id: z.string().min(1, 'La zona es requerida'), // Assuming this will be a Zone ID
   otros_detalles: z.string().optional(),
-  direccion: z.string().optional(),
-  horario_inicio: z.string().optional(),
-  horario_fin: z.string().optional(),
-  frecuencia: z.enum(ALL_FREQUENCIES).optional(),
-  notas_adicionales_parada: z.string().optional(),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;
 
 // Mock data - replace with API calls
 const initialClients: Client[] = [
-  { id: '1', nombre: 'Empresa Alfa', servicios: ['reparto viandas', 'delivery'], dias_de_reparto: ['lunes', 'miércoles', 'viernes'], zona_id: 'zona1', otros_detalles: 'Entregar en recepción', direccion: 'Av. Colón 1234', horario_inicio: '09:00', horario_fin: '12:00', frecuencia: 'lunes, miércoles y viernes' },
-  { id: '2', nombre: 'Particular Beta', servicios: ['mensajería'], dias_de_reparto: ['martes', 'jueves'], zona_id: 'zona2', direccion: 'San Martín 5678', horario_inicio: '14:00', horario_fin: '18:00', frecuencia: 'diario' },
+  { id: '1', nombre: 'Empresa Alfa', servicios: ['reparto viandas', 'delivery'], dias_de_reparto: ['lunes', 'miércoles', 'viernes'], zona_id: 'zona1', otros_detalles: 'Entregar en recepción' },
+  { id: '2', nombre: 'Particular Beta', servicios: ['mensajería'], dias_de_reparto: ['martes', 'jueves'], zona_id: 'zona2', otros_detalles: 'Cliente frecuente' },
 ];
 
 const mockZones: Zone[] = [
@@ -91,20 +84,17 @@ export default function ClientsPage() {
       dias_de_reparto: [],
       zona_id: '',
       otros_detalles: '',
-      direccion: '',
-      horario_inicio: '',
-      horario_fin: '',
-      frecuencia: undefined,
-      notas_adicionales_parada: '',
     },
   });
 
   useEffect(() => {
     if (editingClient) {
       form.reset({
-        ...editingClient,
+        nombre: editingClient.nombre,
         servicios: editingClient.servicios as string[],
         dias_de_reparto: editingClient.dias_de_reparto as string[],
+        zona_id: editingClient.zona_id,
+        otros_detalles: editingClient.otros_detalles || '',
       });
     } else {
       form.reset({
@@ -113,11 +103,6 @@ export default function ClientsPage() {
         dias_de_reparto: [],
         zona_id: '',
         otros_detalles: '',
-        direccion: '',
-        horario_inicio: '',
-        horario_fin: '',
-        frecuencia: undefined,
-        notas_adicionales_parada: '',
       });
     }
   }, [editingClient, form, isDialogOpen]);
@@ -131,7 +116,7 @@ export default function ClientsPage() {
 
     if (editingClient) {
       setClients(
-        clients.map((c) => (c.id === editingClient.id ? { ...c, ...clientData } : c))
+        clients.map((c) => (c.id === editingClient.id ? { ...editingClient, ...clientData } : c))
       );
       toast({ title: "Cliente Actualizado", description: "El cliente ha sido actualizado con éxito." });
     } else {
@@ -154,17 +139,12 @@ export default function ClientsPage() {
 
   const openNewDialog = () => {
     setEditingClient(null);
-     form.reset({ // Reset form for new client
+     form.reset({ 
         nombre: '',
         servicios: [],
         dias_de_reparto: [],
         zona_id: '',
         otros_detalles: '',
-        direccion: '',
-        horario_inicio: '',
-        horario_fin: '',
-        frecuencia: undefined,
-        notas_adicionales_parada: '',
       });
     setIsDialogOpen(true);
   };
@@ -192,6 +172,7 @@ export default function ClientsPage() {
                 <TableHead>Servicios</TableHead>
                 <TableHead>Días de Reparto</TableHead>
                 <TableHead>Zona</TableHead>
+                <TableHead>Otros Detalles</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -210,6 +191,7 @@ export default function ClientsPage() {
                      </div>
                   </TableCell>
                   <TableCell>{getZoneName(client.zona_id)}</TableCell>
+                  <TableCell>{client.otros_detalles || '-'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(client)}>
                       <Edit className="h-4 w-4" />
@@ -226,7 +208,7 @@ export default function ClientsPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingClient ? 'Editar' : 'Nuevo'} Cliente</DialogTitle>
           </DialogHeader>
@@ -338,7 +320,7 @@ export default function ClientsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Zona de Entrega</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar zona" />
@@ -357,88 +339,6 @@ export default function ClientsPage() {
                 )}
               />
               
-              <h3 className="text-lg font-semibold border-t pt-4 mt-6">Detalles de Parada Principal</h3>
-               <FormField
-                control={form.control}
-                name="direccion"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Dirección de Entrega</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: Av. Siempre Viva 742" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="horario_inicio"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Horario de Inicio Preferido</FormLabel>
-                        <FormControl>
-                        <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="horario_fin"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Horario de Fin Preferido</FormLabel>
-                        <FormControl>
-                        <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-              </div>
-               <FormField
-                control={form.control}
-                name="frecuencia"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Frecuencia de Entrega</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar frecuencia" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {ALL_FREQUENCIES.map((freq) => (
-                          <SelectItem key={freq} value={freq}>
-                            {freq.charAt(0).toUpperCase() + freq.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="notas_adicionales_parada"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notas Adicionales (Parada)</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Ej: Tocar timbre depto B, dejar en portería si no hay nadie." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-
-              <h3 className="text-lg font-semibold border-t pt-4 mt-6">Otros Detalles del Cliente</h3>
               <FormField
                 control={form.control}
                 name="otros_detalles"

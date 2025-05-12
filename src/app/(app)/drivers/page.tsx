@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -43,6 +42,8 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 const driverSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
@@ -98,7 +99,7 @@ export default function DriversPage() {
   const onSubmit = (data: DriverFormData) => {
     if (editingDriver) {
       setDrivers(
-        drivers.map((d) => (d.id === editingDriver.id ? { ...d, ...data } : d))
+        drivers.map((d) => (d.id === editingDriver.id ? { ...editingDriver, ...data } : d))
       );
       toast({ title: "Repartidor Actualizado", description: "El repartidor ha sido actualizado con éxito." });
     } else {
@@ -121,7 +122,7 @@ export default function DriversPage() {
 
   const openNewDialog = () => {
     setEditingDriver(null);
-    form.reset({ // Reset form for new driver
+    form.reset({ 
         nombre: '',
         identificacion: '',
         contacto: '',
@@ -151,6 +152,7 @@ export default function DriversPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Identificación</TableHead>
                 <TableHead>Contacto</TableHead>
                 <TableHead>Vehículo</TableHead>
                 <TableHead>Patente</TableHead>
@@ -162,13 +164,19 @@ export default function DriversPage() {
               {drivers.map((driver) => (
                 <TableRow key={driver.id}>
                   <TableCell className="font-medium">{driver.nombre}</TableCell>
+                  <TableCell>{driver.identificacion || '-'}</TableCell>
                   <TableCell>{driver.contacto || '-'}</TableCell>
                   <TableCell>{driver.tipo_vehiculo || '-'}</TableCell>
                   <TableCell>{driver.patente || '-'}</TableCell>
                   <TableCell>
-                    <Badge variant={driver.status === 'activo' ? 'default' : 'secondary'} 
-                           className={driver.status === 'activo' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}>
-                      {driver.status}
+                    <Badge 
+                        variant={driver.status === 'activo' ? 'default' : 'secondary'} 
+                        className={cn(
+                            {'bg-green-500 text-primary-foreground': driver.status === 'activo'},
+                            {'bg-red-500 text-destructive-foreground': driver.status === 'inactivo'}
+                        )}
+                    >
+                      {driver.status.charAt(0).toUpperCase() + driver.status.slice(1)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -214,7 +222,7 @@ export default function DriversPage() {
                     <FormItem>
                       <FormLabel>Identificación (DNI/CUIT)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: 20-12345678-9" {...field} />
+                        <Input placeholder="Ej: 20-12345678-9" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -227,7 +235,7 @@ export default function DriversPage() {
                     <FormItem>
                       <FormLabel>Contacto (Teléfono)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: 2235123456" {...field} />
+                        <Input placeholder="Ej: 2235123456" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -242,7 +250,7 @@ export default function DriversPage() {
                     <FormItem>
                       <FormLabel>Tipo de Vehículo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: Moto Honda Wave" {...field} />
+                        <Input placeholder="Ej: Moto Honda Wave" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -255,7 +263,7 @@ export default function DriversPage() {
                     <FormItem>
                       <FormLabel>Patente</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: AE123FZ" {...field} />
+                        <Input placeholder="Ej: AE123FZ" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -268,7 +276,7 @@ export default function DriversPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar status" />
@@ -299,6 +307,3 @@ export default function DriversPage() {
     </>
   );
 }
-
-// Added Card and CardContent to wrap table for better styling consistency
-import { Card, CardContent } from '@/components/ui/card';

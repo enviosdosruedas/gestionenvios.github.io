@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -54,8 +53,8 @@ import { cn } from '@/lib/utils';
 const deliverySchema = z.object({
   fecha: z.date({ required_error: 'La fecha es requerida.' }),
   repartidor_id: z.string().min(1, 'Seleccione un repartidor.'),
-  zona_id: z.string().min(1, 'Seleccione una zona.'),
-  paradas: z.string().min(1, 'Ingrese las paradas (IDs separados por coma).'), // Simplified for now
+  zona_id: z.string().min(1, 'Seleccione una zona.'), // Assuming this will be a Zone ID
+  paradas: z.string().min(1, 'Ingrese los IDs de las paradas (separados por coma).'), // Will be parsed to string[]
   tanda: z.coerce.number().int().min(1, 'La tanda debe ser un número positivo.'),
   estado_entrega: z.enum(ALL_DELIVERY_STATUSES),
 });
@@ -64,8 +63,8 @@ type DeliveryFormData = z.infer<typeof deliverySchema>;
 
 // Mock data
 const initialDeliveries: Delivery[] = [
-  { id: '1', fecha: new Date(), repartidor_id: 'driver1', paradas: ['stop1', 'stop2'], zona_id: 'zonaA', tanda: 1, estado_entrega: 'en curso' },
-  { id: '2', fecha: new Date(new Date().setDate(new Date().getDate() -1)), repartidor_id: 'driver2', paradas: ['stop3'], zona_id: 'zonaB', tanda: 1, estado_entrega: 'entregado' },
+  { id: '1', fecha: new Date(), repartidor_id: 'driver1', paradas: ['stop1-uuid', 'stop2-uuid'], zona_id: 'zonaA', tanda: 1, estado_entrega: 'en curso' },
+  { id: '2', fecha: new Date(new Date().setDate(new Date().getDate() -1)), repartidor_id: 'driver2', paradas: ['stop3-uuid'], zona_id: 'zonaB', tanda: 1, estado_entrega: 'entregado' },
 ];
 const mockDrivers: Driver[] = [
   { id: 'driver1', nombre: 'Carlos Sainz', status: 'activo' },
@@ -75,11 +74,11 @@ const mockZones: Zone[] = [
   { id: 'zonaA', nombre: 'Centro Histórico' },
   { id: 'zonaB', nombre: 'Barrio Residencial Norte' },
 ];
-// Mock stops for display purposes if needed, but form takes IDs
+// Mock stops for display purposes or selection (not directly part of Delivery schema, but related)
 const mockStops: Stop[] = [
-    { id: 'stop1', cliente_id: 'client1', direccion: 'Calle Falsa 123', horario_inicio: '09:00', horario_fin: '12:00', frecuencia: 'diario', zona_id: 'zonaA' },
-    { id: 'stop2', cliente_id: 'client2', direccion: 'Av. Siempreviva 742', horario_inicio: '10:00', horario_fin: '13:00', frecuencia: 'diario', zona_id: 'zonaA' },
-    { id: 'stop3', cliente_id: 'client3', direccion: 'Pje. Particular 456', horario_inicio: '14:00', horario_fin: '17:00', frecuencia: 'diario', zona_id: 'zonaB' },
+    { id: 'stop1-uuid', cliente_id: 'client1', direccion: 'Calle Falsa 123', horario_inicio: '09:00', horario_fin: '12:00', frecuencia: 'diario', zona_id: 'zonaA' },
+    { id: 'stop2-uuid', cliente_id: 'client2', direccion: 'Av. Siempreviva 742', horario_inicio: '10:00', horario_fin: '13:00', frecuencia: 'diario', zona_id: 'zonaA' },
+    { id: 'stop3-uuid', cliente_id: 'client3', direccion: 'Pje. Particular 456', horario_inicio: '14:00', horario_fin: '17:00', frecuencia: 'diario', zona_id: 'zonaB' },
 ];
 
 
@@ -124,11 +123,11 @@ export default function DeliveriesPage() {
   const onSubmit = (data: DeliveryFormData) => {
     const deliveryData = {
       ...data,
-      paradas: data.paradas.split(',').map(s => s.trim()).filter(s => s), // Convert string to array
+      paradas: data.paradas.split(',').map(s => s.trim()).filter(s => s), // Convert string to array of UUIDs
     };
     if (editingDelivery) {
       setDeliveries(
-        deliveries.map((d) => (d.id === editingDelivery.id ? { ...d, ...deliveryData } : d))
+        deliveries.map((d) => (d.id === editingDelivery.id ? { ...editingDelivery, ...deliveryData } : d))
       );
       toast({ title: "Reparto Actualizado", description: "El reparto ha sido actualizado con éxito." });
     } else {
@@ -151,7 +150,7 @@ export default function DeliveriesPage() {
 
   const openNewDialog = () => {
     setEditingDelivery(null);
-     form.reset({ // Reset form for new item
+     form.reset({
         fecha: new Date(),
         repartidor_id: '',
         zona_id: '',
@@ -186,6 +185,7 @@ export default function DeliveriesPage() {
                 <TableHead>Repartidor</TableHead>
                 <TableHead>Zona</TableHead>
                 <TableHead>Tanda</TableHead>
+                <TableHead>Paradas (Cant.)</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -197,15 +197,16 @@ export default function DeliveriesPage() {
                   <TableCell>{getDriverName(delivery.repartidor_id)}</TableCell>
                   <TableCell>{getZoneName(delivery.zona_id)}</TableCell>
                   <TableCell>{delivery.tanda}</TableCell>
+                  <TableCell>{delivery.paradas.length}</TableCell>
                   <TableCell>
                     <Badge 
                         variant={delivery.estado_entrega === 'entregado' ? 'default' : (delivery.estado_entrega === 'en curso' ? 'secondary' : 'outline')}
                         className={cn(
-                            {'bg-green-500 text-white': delivery.estado_entrega === 'entregado'},
-                            {'bg-blue-500 text-white': delivery.estado_entrega === 'en curso'},
-                            {'bg-yellow-500 text-black': delivery.estado_entrega === 'pendiente'},
-                            {'bg-red-500 text-white': delivery.estado_entrega === 'cancelado'},
-                            {'bg-purple-500 text-white': delivery.estado_entrega === 'reprogramado'}
+                            {'bg-green-500 text-primary-foreground': delivery.estado_entrega === 'entregado'},
+                            {'bg-polynesian-blue-500 text-primary-foreground': delivery.estado_entrega === 'en curso'}, // Using a blue from palette
+                            {'bg-mikado-yellow-500 text-secondary-foreground': delivery.estado_entrega === 'pendiente'}, // Using yellow from palette
+                            {'bg-red-500 text-destructive-foreground': delivery.estado_entrega === 'cancelado'},
+                            {'bg-purple-500 text-primary-foreground': delivery.estado_entrega === 'reprogramado'} // custom color for reprogramado
                         )}
                     >
                       {delivery.estado_entrega.charAt(0).toUpperCase() + delivery.estado_entrega.slice(1)}
@@ -281,7 +282,7 @@ export default function DeliveriesPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Repartidor Asignado</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Seleccionar repartidor" /></SelectTrigger>
                       </FormControl>
@@ -301,7 +302,7 @@ export default function DeliveriesPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Zona de Reparto</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Seleccionar zona" /></SelectTrigger>
                       </FormControl>
@@ -322,7 +323,7 @@ export default function DeliveriesPage() {
                   <FormItem>
                     <FormLabel>Paradas (IDs de Parada, ordenados y separados por coma)</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Ej: stop1, stop3, stop2" {...field} />
+                      <Textarea placeholder="Ej: uuid-stop1, uuid-stop3, uuid-stop2" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -348,7 +349,7 @@ export default function DeliveriesPage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Estado de Entrega</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                         <FormControl>
                             <SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
                         </FormControl>

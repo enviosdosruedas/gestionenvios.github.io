@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -39,17 +38,18 @@ import { Card, CardContent } from '@/components/ui/card';
 
 const zoneSchema = z.object({
   nombre: z.string().min(1, 'El nombre de la zona es requerido'),
+  // id is generated, not part of form
 });
 
 type ZoneFormData = z.infer<typeof zoneSchema>;
 
 // Mock data
 const initialZones: Zone[] = [
-  { id: 'zona1', nombre: 'Centro' },
-  { id: 'zona2', nombre: 'Sur' },
-  { id: 'zona3', nombre: 'Norte - La Perla' },
-  { id: 'zona4', nombre: 'Puerto' },
-  { id: 'zona5', nombre: 'Chauvin - Los Troncos' },
+  { id: 'zona1-uuid', nombre: 'Centro' },
+  { id: 'zona2-uuid', nombre: 'Sur' },
+  { id: 'zona3-uuid', nombre: 'Norte - La Perla' },
+  { id: 'zona4-uuid', nombre: 'Puerto' },
+  { id: 'zona5-uuid', nombre: 'Chauvin - Los Troncos' },
 ];
 
 export default function ZonesPage() {
@@ -67,7 +67,7 @@ export default function ZonesPage() {
 
   useEffect(() => {
     if (editingZone) {
-      form.reset(editingZone);
+      form.reset({ nombre: editingZone.nombre });
     } else {
       form.reset({ nombre: '' });
     }
@@ -76,11 +76,12 @@ export default function ZonesPage() {
   const onSubmit = (data: ZoneFormData) => {
     if (editingZone) {
       setZones(
-        zones.map((z) => (z.id === editingZone.id ? { ...z, ...data } : z))
+        zones.map((z) => (z.id === editingZone.id ? { ...editingZone, ...data } : z))
       );
       toast({ title: "Zona Actualizada", description: "La zona ha sido actualizada con éxito." });
     } else {
-      setZones([...zones, { id: Date.now().toString(), ...data }]);
+      // In a real app, ID would come from Supabase
+      setZones([...zones, { id: `uuid-${Date.now().toString()}`, ...data }]);
       toast({ title: "Zona Creada", description: "La nueva zona ha sido creada con éxito." });
     }
     setEditingZone(null);
@@ -121,6 +122,7 @@ export default function ZonesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>ID</TableHead>
                 <TableHead>Nombre de la Zona</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -128,6 +130,7 @@ export default function ZonesPage() {
             <TableBody>
               {zones.map((zone) => (
                 <TableRow key={zone.id}>
+                  <TableCell className="font-mono text-xs">{zone.id}</TableCell>
                   <TableCell className="font-medium">{zone.nombre}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(zone)}>

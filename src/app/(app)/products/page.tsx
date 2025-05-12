@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -45,12 +44,13 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 const productSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
   descripcion: z.string().optional(),
   categoria: z.string().optional(),
-  precio: z.coerce.number().min(0, 'El precio debe ser positivo'),
+  precio: z.coerce.number().min(0, 'El precio debe ser positivo o cero'),
   estado: z.enum(ALL_PRODUCT_STATUSES),
 });
 
@@ -58,9 +58,9 @@ type ProductFormData = z.infer<typeof productSchema>;
 
 // Mock data
 const initialProducts: Product[] = [
-  { id: '1', nombre: 'Vianda Pollo con Arroz', categoria: 'Viandas Clásicas', precio: 1200, estado: 'disponible' },
-  { id: '2', nombre: 'Vianda Vegetariana', descripcion: 'Lentejas con vegetales salteados.', categoria: 'Viandas Vegetarianas', precio: 1100, estado: 'disponible' },
-  { id: '3', nombre: 'Milanesa con Puré', categoria: 'Viandas Clásicas', precio: 1350, estado: 'agotado' },
+  { id: 'prod1-uuid', nombre: 'Vianda Pollo con Arroz', categoria: 'Viandas Clásicas', precio: 1200, estado: 'disponible' },
+  { id: 'prod2-uuid', nombre: 'Vianda Vegetariana', descripcion: 'Lentejas con vegetales salteados.', categoria: 'Viandas Vegetarianas', precio: 1100, estado: 'disponible' },
+  { id: 'prod3-uuid', nombre: 'Milanesa con Puré', categoria: 'Viandas Clásicas', precio: 1350, estado: 'agotado' },
 ];
 
 export default function ProductsPage() {
@@ -97,11 +97,11 @@ export default function ProductsPage() {
   const onSubmit = (data: ProductFormData) => {
     if (editingProduct) {
       setProducts(
-        products.map((p) => (p.id === editingProduct.id ? { ...p, ...data } : p))
+        products.map((p) => (p.id === editingProduct.id ? { ...editingProduct, ...data } : p))
       );
       toast({ title: "Producto Actualizado", description: "El producto ha sido actualizado con éxito." });
     } else {
-      setProducts([...products, { id: Date.now().toString(), ...data }]);
+      setProducts([...products, { id: `uuid-${Date.now().toString()}`, ...data }]);
       toast({ title: "Producto Creado", description: "El nuevo producto ha sido creado con éxito." });
     }
     setEditingProduct(null);
@@ -120,7 +120,7 @@ export default function ProductsPage() {
 
   const openNewDialog = () => {
     setEditingProduct(null);
-    form.reset({ // Reset form for new product
+    form.reset({ 
         nombre: '',
         descripcion: '',
         categoria: '',
@@ -161,9 +161,15 @@ export default function ProductsPage() {
                   <TableCell>{product.categoria || '-'}</TableCell>
                   <TableCell>${product.precio.toFixed(2)}</TableCell>
                   <TableCell>
-                    <Badge variant={product.estado === 'disponible' ? 'default' : (product.estado === 'agotado' ? 'destructive' : 'secondary')}
-                           className={product.estado === 'disponible' ? 'bg-green-500 text-white' : (product.estado === 'agotado' ? 'bg-orange-500 text-white' : 'bg-gray-500 text-white')}>
-                      {product.estado}
+                    <Badge 
+                        variant={product.estado === 'disponible' ? 'default' : (product.estado === 'agotado' ? 'destructive' : 'secondary')}
+                        className={cn(
+                            {'bg-green-500 text-primary-foreground': product.estado === 'disponible'},
+                            {'bg-orange-500 text-primary-foreground': product.estado === 'agotado'},
+                            {'bg-gray-500 text-primary-foreground': product.estado === 'descontinuado'}
+                        )}
+                    >
+                      {product.estado.charAt(0).toUpperCase() + product.estado.slice(1)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -208,7 +214,7 @@ export default function ProductsPage() {
                   <FormItem>
                     <FormLabel>Descripción (Opcional)</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Ej: Pollo grillado con ensalada fresca." {...field} />
+                      <Textarea placeholder="Ej: Pollo grillado con ensalada fresca." {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -222,7 +228,7 @@ export default function ProductsPage() {
                     <FormItem>
                       <FormLabel>Categoría (Opcional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: Viandas Light" {...field} />
+                        <Input placeholder="Ej: Viandas Light" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -248,7 +254,7 @@ export default function ProductsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Estado</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar estado" />
