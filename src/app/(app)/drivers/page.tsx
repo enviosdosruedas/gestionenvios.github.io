@@ -81,7 +81,7 @@ export default function DriversPage() {
   const fetchDrivers = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.from('Repartidores').select('*').order('nombre', { ascending: true });
+      const { data, error } = await supabase.from('repartidores').select('*').order('nombre', { ascending: true });
       if (error) throw error;
       setDrivers(data || []);
     } catch (error: any) {
@@ -139,11 +139,11 @@ export default function DriversPage() {
 
     try {
       if (editingDriver) {
-        const { error } = await supabase.from('Repartidores').update(submissionData).eq('id', editingDriver.id);
+        const { error } = await supabase.from('repartidores').update(submissionData).eq('id', editingDriver.id);
         if (error) throw error;
         toast({ title: "Repartidor Actualizado", description: "El repartidor ha sido actualizado con éxito." });
       } else {
-        const { error } = await supabase.from('Repartidores').insert([submissionData]);
+        const { error } = await supabase.from('repartidores').insert([submissionData]);
         if (error) throw error;
         toast({ title: "Repartidor Creado", description: "El nuevo repartidor ha sido creado con éxito." });
       }
@@ -165,7 +165,7 @@ export default function DriversPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from('Repartidores').delete().eq('id', id);
+      const { error } = await supabase.from('repartidores').delete().eq('id', id);
       if (error) throw error;
       fetchDrivers();
       toast({ title: "Repartidor Eliminado", description: "El repartidor ha sido eliminado.", variant: "destructive" });

@@ -80,7 +80,7 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.from('Productos').select('*').order('nombre', { ascending: true });
+      const { data, error } = await supabase.from('productos').select('*').order('nombre', { ascending: true });
       if (error) throw error;
       setProducts(data || []);
     } catch (error: any) {
@@ -125,11 +125,11 @@ export default function ProductsPage() {
 
     try {
       if (editingProduct) {
-        const { error } = await supabase.from('Productos').update(submissionData).eq('id', editingProduct.id);
+        const { error } = await supabase.from('productos').update(submissionData).eq('id', editingProduct.id);
         if (error) throw error;
         toast({ title: "Producto Actualizado", description: "El producto ha sido actualizado con éxito." });
       } else {
-        const { error } = await supabase.from('Productos').insert([submissionData]);
+        const { error } = await supabase.from('productos').insert([submissionData]);
         if (error) throw error;
         toast({ title: "Producto Creado", description: "El nuevo producto ha sido creado con éxito." });
       }
@@ -146,7 +146,7 @@ export default function ProductsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from('Productos').delete().eq('id', id);
+      const { error } = await supabase.from('productos').delete().eq('id', id);
       if (error) throw error;
       fetchProducts();
       toast({ title: "Producto Eliminado", description: "El producto ha sido eliminado.", variant: "destructive" });

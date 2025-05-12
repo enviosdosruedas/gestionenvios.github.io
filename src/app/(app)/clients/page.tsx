@@ -84,8 +84,8 @@ export default function ClientsPage() {
     setIsLoading(true);
     try {
       const [clientsRes, zonesRes] = await Promise.all([
-        supabase.from('ClientesNuestros').select('*').order('nombre', { ascending: true }),
-        supabase.from('Zonas').select('*').order('nombre', { ascending: true })
+        supabase.from('clientesnuestros').select('*').order('nombre', { ascending: true }),
+        supabase.from('zonas').select('*').order('nombre', { ascending: true })
       ]);
 
       if (clientsRes.error) throw clientsRes.error;
@@ -140,11 +140,11 @@ export default function ClientsPage() {
 
     try {
       if (editingClient) {
-        const { error } = await supabase.from('ClientesNuestros').update(submissionData).eq('id', editingClient.id);
+        const { error } = await supabase.from('clientesnuestros').update(submissionData).eq('id', editingClient.id);
         if (error) throw error;
         toast({ title: "Cliente Actualizado", description: "El cliente ha sido actualizado con éxito." });
       } else {
-        const { error } = await supabase.from('ClientesNuestros').insert([submissionData]);
+        const { error } = await supabase.from('clientesnuestros').insert([submissionData]);
         if (error) throw error;
         toast({ title: "Cliente Creado", description: "El nuevo cliente ha sido creado con éxito." });
       }
@@ -161,7 +161,7 @@ export default function ClientsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from('ClientesNuestros').delete().eq('id', id);
+      const { error } = await supabase.from('clientesnuestros').delete().eq('id', id);
       if (error) throw error;
       fetchClientsAndZones();
       toast({ title: "Cliente Eliminado", description: "El cliente ha sido eliminado.", variant: "destructive" });

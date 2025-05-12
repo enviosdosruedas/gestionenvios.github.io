@@ -91,10 +91,10 @@ export default function DeliveriesPage() {
     setIsLoading(true);
     try {
       const [deliveriesRes, driversRes, zonesRes /*, stopsRes */] = await Promise.all([
-        supabase.from('Repartos').select('*').order('fecha', { ascending: false }),
-        supabase.from('Repartidores').select('*').order('nombre'),
-        supabase.from('Zonas').select('*').order('nombre'),
-        // supabase.from('Paradas').select('*') // Fetch if needed
+        supabase.from('repartos').select('*').order('fecha', { ascending: false }),
+        supabase.from('repartidores').select('*').order('nombre'),
+        supabase.from('zonas').select('*').order('nombre'),
+        // supabase.from('paradas').select('*') // Fetch if needed
       ]);
 
       if (deliveriesRes.error) throw deliveriesRes.error;
@@ -150,11 +150,11 @@ export default function DeliveriesPage() {
 
     try {
       if (editingDelivery) {
-        const { error } = await supabase.from('Repartos').update(submissionData).eq('id', editingDelivery.id);
+        const { error } = await supabase.from('repartos').update(submissionData).eq('id', editingDelivery.id);
         if (error) throw error;
         toast({ title: "Reparto Actualizado", description: "El reparto ha sido actualizado con éxito." });
       } else {
-        const { error } = await supabase.from('Repartos').insert([submissionData]);
+        const { error } = await supabase.from('repartos').insert([submissionData]);
         if (error) throw error;
         toast({ title: "Reparto Creado", description: "El nuevo reparto ha sido creado con éxito." });
       }
@@ -171,7 +171,7 @@ export default function DeliveriesPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from('Repartos').delete().eq('id', id);
+      const { error } = await supabase.from('repartos').delete().eq('id', id);
       if (error) throw error;
       fetchData();
       toast({ title: "Reparto Eliminado", description: "El reparto ha sido eliminado.", variant: "destructive" });

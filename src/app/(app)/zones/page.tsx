@@ -62,7 +62,7 @@ export default function ZonesPage() {
   const fetchZones = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.from('Zonas').select('*').order('nombre', { ascending: true });
+      const { data, error } = await supabase.from('zonas').select('*').order('nombre', { ascending: true });
       if (error) throw error;
       setZones(data || []);
     } catch (error: any) {
@@ -89,11 +89,11 @@ export default function ZonesPage() {
     setIsSubmitting(true);
     try {
       if (editingZone) {
-        const { error } = await supabase.from('Zonas').update(data).eq('id', editingZone.id);
+        const { error } = await supabase.from('zonas').update(data).eq('id', editingZone.id);
         if (error) throw error;
         toast({ title: "Zona Actualizada", description: "La zona ha sido actualizada con éxito." });
       } else {
-        const { error } = await supabase.from('Zonas').insert([data]);
+        const { error } = await supabase.from('zonas').insert([data]);
         if (error) throw error;
         toast({ title: "Zona Creada", description: "La nueva zona ha sido creada con éxito." });
       }
@@ -110,7 +110,7 @@ export default function ZonesPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from('Zonas').delete().eq('id', id);
+      const { error } = await supabase.from('zonas').delete().eq('id', id);
       if (error) throw error;
       fetchZones();
       toast({ title: "Zona Eliminada", description: "La zona ha sido eliminada.", variant: "destructive" });
