@@ -1,140 +1,113 @@
--- Supabase Seed Data for Viandas Express Admin
+-- supabase/seed.sql
+-- This file is used to seed your Supabase database.
+-- You can edit it to add your own data.
 
--- Zonas
--- Insertar zonas solo si no existen para evitar duplicados si el script se corre múltiples veces.
+-- Clear existing data (optional, use with caution)
+-- DELETE FROM public.ClientesReparto;
+-- DELETE FROM public.Repartos;
+-- DELETE FROM public.Paradas;
+-- DELETE FROM public.ClientesNuestros;
+-- DELETE FROM public.Repartidores;
+-- DELETE FROM public.Productos;
+-- DELETE FROM public.Zonas;
+
+-- Insert data into Zonas
 INSERT INTO public.Zonas (nombre) VALUES
-('Centro') ON CONFLICT (nombre) DO NOTHING;
+('Centro'),
+('Sur'),
+('Este'),
+('Oeste'),
+('Puerto'),
+('Constitución'),
+('Otros')
+ON CONFLICT (nombre) DO NOTHING;
 
-INSERT INTO public.Zonas (nombre) VALUES
-('Sur') ON CONFLICT (nombre) DO NOTHING;
-
-INSERT INTO public.Zonas (nombre) VALUES
-('Este') ON CONFLICT (nombre) DO NOTHING;
-
-INSERT INTO public.Zonas (nombre) VALUES
-('Otros') ON CONFLICT (nombre) DO NOTHING;
-
--- Repartidores
--- Insertar repartidores. Asumimos que si el nombre es el mismo, es el mismo repartidor,
--- aunque en una app real se podría usar un identificador único como 'identificacion'.
--- Para simplificar, usaremos ON CONFLICT (nombre) DO NOTHING.
+-- Insert data into Repartidores
 INSERT INTO public.Repartidores (nombre, identificacion, contacto, tipo_vehiculo, patente, status) VALUES
-('Matias Cejas', '20-30123456-7', '223-5111111', 'Moto Honda Titan 150', 'A001BCD', 'activo')
-ON CONFLICT (nombre) DO NOTHING;
+('Matias Cejas', '20-30123456-7', '2235111111', 'Moto Honda Wave 110', 'A001BCD', 'activo'),
+('Repartidor 1', '20-31234567-8', '2235222222', 'Moto Zanella ZB 110', 'A002CDE', 'activo'),
+('Repartidor 2', '20-32345678-9', '2235333333', 'Bicicleta Mountain Bike', NULL, 'activo'),
+('Repartidor 3', '20-33456789-0', '2235444444', 'Moto Corven Energy 110', 'A003EFG', 'inactivo'),
+('Repartidor 4', '20-34567890-1', '2235555555', 'Auto Fiat Cronos', 'AD123BC', 'activo')
+ON CONFLICT (nombre) DO NOTHING; -- Assuming nombre should be unique for simplicity, adjust if not
 
-INSERT INTO public.Repartidores (nombre, identificacion, contacto, tipo_vehiculo, patente, status) VALUES
-('Repartidor 1', '20-31234567-8', '223-5222222', 'Moto Yamaha YBR 125', 'A002CDE', 'activo')
-ON CONFLICT (nombre) DO NOTHING;
+-- Insert data into ClientesNuestros
+-- Note: zona_id is looked up. Ensure Zonas are inserted first.
+INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
+('NUTRISABOR (Viandas)', 'Ohiggins 1410', ARRAY['reparto viandas', 'delivery']::TEXT[], ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[], (SELECT id from public.Zonas WHERE nombre = 'Centro'), 'Cliente principal de viandas, retiro en local.'),
+('RIDDLER SUPLEMENTOS', 'Av colon 2134', ARRAY['mensajería', 'delivery']::TEXT[], ARRAY['lunes', 'miércoles', 'viernes']::TEXT[], (SELECT id from public.Zonas WHERE nombre = 'Centro'), 'Entrega de suplementos deportivos.'),
+('FARMACIA FEDERADA', 'Alberti 3963', ARRAY['mensajería']::TEXT[], ARRAY['martes', 'jueves']::TEXT[], (SELECT id from public.Zonas WHERE nombre = 'Este'), 'Retiro de recetas y entrega de medicamentos urgentes.'),
+('FARMACIA SOCIAL LURO', 'Luro 3499', ARRAY['mensajería']::TEXT[], ARRAY['lunes', 'miércoles', 'viernes']::TEXT[], (SELECT id from public.Zonas WHERE nombre = 'Centro'), 'Entrega de medicamentos y perfumería.'),
+('MARIELA PASHER', 'Entre ríos 2131', ARRAY['delivery', 'otros']::TEXT[], ARRAY['jueves']::TEXT[], (SELECT id from public.Zonas WHERE nombre = 'Centro'), 'Entregas personales, cosméticos.'),
+('EL CÓNDOR', 'Güemes 2945', ARRAY['mensajería', 'delivery']::TEXT[], ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']::TEXT[], (SELECT id from public.Zonas WHERE nombre = 'Centro'), 'Dos sucursales: Güemes 2945 y Colon y Neuquén. Retirar pedidos de ambas.'),
+('ARYA COMPLEMENTOS', 'Corrientes 2569', ARRAY['delivery']::TEXT[], ARRAY['miércoles', 'viernes']::TEXT[], (SELECT id from public.Zonas WHERE nombre = 'Centro'), 'Accesorios y bijouterie.'),
+('PICADA CLUB', 'Dorrego 1023', ARRAY['delivery']::TEXT[], ARRAY['viernes', 'sábado', 'domingo']::TEXT[], (SELECT id from public.Zonas WHERE nombre = 'Sur'), 'Pedidos de picadas para eventos y fines de semana.'),
+('CHULADAS STORE', 'Carlos Alvear 3015', ARRAY['delivery', 'mensajería']::TEXT[], ARRAY['martes', 'jueves', 'sábado']::TEXT[], (SELECT id from public.Zonas WHERE nombre = 'Puerto'), 'Regalería y objetos de diseño.'),
+('FIBRA HUMANA MDQ', 'Olavarría 2663', ARRAY['reparto viandas', 'delivery']::TEXT[], ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[], (SELECT id from public.Zonas WHERE nombre = 'Centro'), 'Viandas saludables y productos orgánicos.')
+ON CONFLICT (nombre) DO NOTHING; -- Assuming nombre should be unique
 
-INSERT INTO public.Repartidores (nombre, identificacion, contacto, tipo_vehiculo, patente, status) VALUES
-('Repartidor 2', '20-32345678-9', '223-5333333', 'Auto Fiat Cronos', 'AE345FG', 'activo')
-ON CONFLICT (nombre) DO NOTHING;
+-- Insert data into ClientesReparto
+-- Linked to 'NUTRISABOR (Viandas)'
+-- Tanda 1 (Retira O'Higgins 1410)
+INSERT INTO public.ClientesReparto (cliente_nuestro_id, nombre, direccion, horario_inicio, horario_fin, restricciones, tipo_reparto, dias_especificos) VALUES
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Raul/Belen cuixart', 'Roca 2906', NULL, '09:00:00', 'Entregar antes de las 9hs', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Hugo Astrada', 'Castelli 2953', NULL, '09:30:00', 'TIMBRE B. Entregar antes de las 9:30hs', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Marina Murias', 'San luis 2065', NULL, '09:00:00', 'ENCARGADO (Tocar siempre 4A para avisar que se entrego). Antes 9hs', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Cristina Carnaghi', 'Buenos aires 2365', NULL, '09:00:00', 'Encargada o 10E. Antes 9hs', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Maria esther stato', 'Buenos aires 2071', NULL, NULL, 'Encargada o 5i', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Diego gregoracci', 'Corrientes 1527', NULL, NULL, '15D', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Nilda lago y Maria Elisa cabanelas', 'Diag Alberdi 2550', NULL, NULL, 'PISO H O PORTERIA', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Lujan nievas', 'Independencia 930', NULL, NULL, 'MAPFRE', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Luciana roinich', 'Bv maritimo p p ramos 449', NULL, NULL, '4B', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Maria laura cabanelas', 'Chacabuco 3280', NULL, NULL, NULL, 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Pedro mutti', 'Luro y la rioja', NULL, NULL, 'SPORT CLUB', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Tadeo Cortejarena', 'H Yrigoyen y luro', NULL, NULL, 'MUNICIPALIDAD 2236939300 LLAMAR', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Mauro Martinez y Maria Lorena tadini', 'San martin 2932', NULL, NULL, 'AFIP 3ER PISO', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]);
 
-INSERT INTO public.Repartidores (nombre, identificacion, contacto, tipo_vehiculo, patente, status) VALUES
-('Repartidor 3', '20-33456789-0', '223-5444444', 'Bicicleta Mountain Bike', NULL, 'activo')
-ON CONFLICT (nombre) DO NOTHING;
+-- Tanda 2 (Retira O'Higgins 1410)
+INSERT INTO public.ClientesReparto (cliente_nuestro_id, nombre, direccion, horario_inicio, horario_fin, restricciones, tipo_reparto, dias_especificos) VALUES
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Eduardo chiaramonte', 'Garay 3277', '09:30:00', NULL, 'DESDE 9:30HS', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Mauro Pereyra', 'Independencia y Rawson', '10:00:00', NULL, 'BANCO SUPERVIELLE. DESDE 10HS', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Colangelo', 'Independencia 2650', '10:00:00', NULL, 'BANCO BBVA (Subir 1er Piso). DESDE 10HS', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Mariana Noreiko', 'Mitre 2579', NULL, NULL, 'COLEGIO MARIANO MORENO', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Yamila romero', 'Independencia 2024', NULL, NULL, 'JUZGADO 2', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Liliana baffigi', 'Guido 1942', NULL, '12:00:00', 'ANTES 12HS', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Ventimiglia', 'Guido 2019', NULL, NULL, NULL, 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Iñaki Aguilera', '20 septiembre 1813', NULL, NULL, 'COLEGIO TOCAR TIMBRE ENTRAR Y A TU IZQUIERDA DEJAR EN SECRETARIA', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Carolina orofino', 'Salta 1572', NULL, NULL, '1RO 4', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Paula Mingari', 'Rivadavia 3171', NULL, NULL, 'CABRALES', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Eleonara Gonzalez', 'Rivadavia 2320', NULL, NULL, 'FARMACIA', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]);
 
-INSERT INTO public.Repartidores (nombre, identificacion, contacto, tipo_vehiculo, patente, status) VALUES
-('Repartidor 4', '20-34567890-1', '223-5555555', 'Moto Zanella ZB 110', 'A003DEF', 'inactivo')
-ON CONFLICT (nombre) DO NOTHING;
+-- Tanda 3 (Retira Ohiggns 1410)
+INSERT INTO public.ClientesReparto (cliente_nuestro_id, nombre, direccion, horario_inicio, horario_fin, restricciones, tipo_reparto, dias_especificos) VALUES
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Sofia Cordoba', 'Viamonte 2165', NULL, NULL, '4D LLAMAR O MANDAR MENSAJE 2235015136', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Rolando puente', 'Gascón 2011', NULL, '12:00:00', '4M. Antes 12hs', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Stella maria fernandez', 'Santa Fe 2574', NULL, NULL, '6 Piso', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Elba di blasio', 'Colon 2210', NULL, '11:00:00', '10A. Antes 11hs', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Beatriz ressia', 'Colon 2034', NULL, NULL, 'Entrar con llave magnetica y dejar sobre mesa del encargado', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Elisa tedeschi', 'Colon 1828', NULL, NULL, '2B', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Mario caponetto', 'Corrientes 2035', '10:00:00', NULL, '5A. DESDE 10HS', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Agustin araujo prado', 'S estero 1943', NULL, NULL, '6F', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Sonzini', 'San luis 1722', NULL, NULL, 'ENCARGADO O 12B', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Mercedes Campanella', 'San luis 1722', NULL, NULL, '6D', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]),
+((SELECT id FROM public.ClientesNuestros WHERE nombre = 'NUTRISABOR (Viandas)'), 'Patricia Bogado', 'Cordoba 2263', NULL, NULL, '3A', 'diario', ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[]);
 
--- Mensajes informativos (se verán en la consola de Supabase SQL Editor)
-SELECT 'Seed data para Zonas y Repartidores insertada (o ya existente).';
-SELECT COUNT(*) || ' zonas en la tabla Zonas.' FROM public.Zonas;
-SELECT COUNT(*) || ' repartidores en la tabla Repartidores.' FROM public.Repartidores;
-
-
--- Insertar clientes (basado en la solicitud anterior, asumiendo que 'direccion_retiro' es 'otros_detalles' para algunos casos o una nueva columna)
--- Se asume que la columna 'direccion_retiro' fue agregada a 'ClientesNuestros' como TEXT.
--- Si 'direccion_retiro' no existe, estos inserts fallarán o necesitarán ajuste.
--- Para este ejemplo, se usa el nombre del cliente y la dirección de retiro. El resto de campos como
--- servicios, dias_de_reparto y zona_id se pueden dejar NULL o con valores por defecto si la tabla lo permite.
--- Se asignará la zona 'Centro' por defecto si está disponible.
-
-DO $$
-DECLARE
-    centro_zona_id UUID;
-BEGIN
-    SELECT id INTO centro_zona_id FROM public.Zonas WHERE nombre = 'Centro' LIMIT 1;
-
-    -- NUTRISABOR (Viandas)
-    INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
-    ('NUTRISABOR (Viandas)', 'Ohiggins 1410', ARRAY['reparto viandas']::TEXT[], ARRAY['lunes', 'miércoles', 'viernes']::TEXT[], centro_zona_id, 'Retiro en local')
-    ON CONFLICT (nombre) DO NOTHING;
-
-    -- RIDDLER SUPLEMENTOS
-    INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
-    ('RIDDLER SUPLEMENTOS', 'Av colon 2134', ARRAY['delivery']::TEXT[], ARRAY['martes', 'jueves']::TEXT[], centro_zona_id, 'Suplementos deportivos')
-    ON CONFLICT (nombre) DO NOTHING;
-
-    -- FARMACIA FEDERADA
-    INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
-    ('FARMACIA FEDERADA', 'Alberti 3963', ARRAY['mensajería']::TEXT[], ARRAY['lunes', 'martes', 'miércoles', 'jueves', 'viernes']::TEXT[], centro_zona_id, 'Entrega de medicamentos')
-    ON CONFLICT (nombre) DO NOTHING;
-
-    -- FARMACIA SOCIAL LURO
-    INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
-    ('FARMACIA SOCIAL LURO', 'Luro 3499', ARRAY['mensajería']::TEXT[], ARRAY['lunes', 'miércoles', 'viernes']::TEXT[], centro_zona_id, NULL)
-    ON CONFLICT (nombre) DO NOTHING;
-
-    -- MARIELA PASHER
-    INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
-    ('MARIELA PASHER', 'Entre ríos 2131', ARRAY['otros']::TEXT[], ARRAY['martes']::TEXT[], centro_zona_id, 'Productos de estética')
-    ON CONFLICT (nombre) DO NOTHING;
-
-    -- EL CÓNDOR (Sucursal Güemes)
-    INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
-    ('EL CÓNDOR (Güemes)', 'Güemes 2945', ARRAY['delivery']::TEXT[], ARRAY['lunes', 'sábado']::TEXT[], centro_zona_id, 'Sucursal Güemes. Artículos regionales.')
-    ON CONFLICT (nombre) DO NOTHING;
-
-    -- EL CÓNDOR (Sucursal Colón y Neuquén)
-    INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
-    ('EL CÓNDOR (Colón)', 'Colon y Neuquén', ARRAY['delivery']::TEXT[], ARRAY['lunes', 'sábado']::TEXT[], centro_zona_id, 'Sucursal Colón y Neuquén. Artículos regionales.')
-    ON CONFLICT (nombre) DO NOTHING;
-
-    -- ARYA COMPLEMENTOS
-    INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
-    ('ARYA COMPLEMENTOS', 'Corrientes 2569', ARRAY['delivery']::TEXT[], ARRAY['miércoles', 'viernes']::TEXT[], centro_zona_id, 'Accesorios de moda')
-    ON CONFLICT (nombre) DO NOTHING;
-
-    -- PICADA CLUB
-    INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
-    ('PICADA CLUB', 'Dorrego 1023', ARRAY['reparto viandas']::TEXT[], ARRAY['viernes', 'sábado']::TEXT[], centro_zona_id, 'Especialidad en picadas')
-    ON CONFLICT (nombre) DO NOTHING;
-
-    -- CHULADAS STORE
-    INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
-    ('CHULADAS STORE', 'Carlos Alvear 3015', ARRAY['delivery']::TEXT[], ARRAY['jueves']::TEXT[], centro_zona_id, 'Tienda de regalos')
-    ON CONFLICT (nombre) DO NOTHING;
-
-    -- FIBRA HUMANA MDQ
-    INSERT INTO public.ClientesNuestros (nombre, direccion_retiro, servicios, dias_de_reparto, zona_id, otros_detalles) VALUES
-    ('FIBRA HUMANA MDQ', 'Olavarría 2663', ARRAY['otros']::TEXT[], ARRAY['lunes', 'jueves']::TEXT[], centro_zona_id, 'Productos saludables')
-    ON CONFLICT (nombre) DO NOTHING;
-
-END $$;
-
-SELECT COUNT(*) || ' clientes en la tabla ClientesNuestros.' FROM public.ClientesNuestros;
-
--- Productos (Viandas)
+-- Insert example Productos
 INSERT INTO public.Productos (nombre, descripcion, categoria, precio, estado) VALUES
-('Vianda Clásica de Pollo', 'Pollo al horno con guarnición de arroz y vegetales.', 'Clásicas', 1250.00, 'disponible')
+('Vianda Clásica Pollo', 'Pollo grillado con guarnición de arroz y vegetales.', 'Viandas Clásicas', 1800.00, 'disponible'),
+('Vianda Veggie Lentejas', 'Guiso de lentejas con vegetales de estación.', 'Viandas Vegetarianas', 1700.00, 'disponible'),
+('Vianda Light Salmón', 'Salmón rosado a la plancha con ensalada de hojas verdes.', 'Viandas Light', 2200.00, 'disponible'),
+('Postre Flan Casero', 'Porción individual de flan casero con dulce de leche.', 'Postres', 800.00, 'disponible'),
+('Bebida Agua Mineral 500ml', 'Agua mineral sin gas.', 'Bebidas', 500.00, 'disponible'),
+('Vianda Carne al Horno', 'Carne de ternera al horno con papas rústicas.', 'Viandas Clásicas', 1950.00, 'agotado'),
+('Producto Descontinuado Ejemplo', 'Este producto ya no se ofrece.', 'Descontinuados', 100.00, 'descontinuado')
 ON CONFLICT (nombre) DO NOTHING;
 
-INSERT INTO public.Productos (nombre, descripcion, categoria, precio, estado) VALUES
-('Vianda Vegetariana de Lentejas', 'Guiso de lentejas con verduras de estación y especias.', 'Vegetarianas', 1150.00, 'disponible')
-ON CONFLICT (nombre) DO NOTHING;
-
-INSERT INTO public.Productos (nombre, descripcion, categoria, precio, estado) VALUES
-('Milanesa de Ternera con Puré', 'Milanesa de ternera acompañada de puré de papas cremoso.', 'Clásicas', 1380.00, 'disponible')
-ON CONFLICT (nombre) DO NOTHING;
-
-INSERT INTO public.Productos (nombre, descripcion, categoria, precio, estado) VALUES
-('Tarta Individual de Jamón y Queso', 'Porción individual de tarta casera.', 'Tartas', 950.00, 'agotado')
-ON CONFLICT (nombre) DO NOTHING;
-
-INSERT INTO public.Productos (nombre, descripcion, categoria, precio, estado) VALUES
-('Ensalada Caesar con Pollo Crispy', 'Lechuga, croutons, aderezo caesar y pollo crispy.', 'Ensaladas', 1450.00, 'disponible')
-ON CONFLICT (nombre) DO NOTHING;
-
-SELECT COUNT(*) || ' productos en la tabla Productos.' FROM public.Productos;
+-- Note: RLS policies needs to be enabled for these tables in Supabase dashboard
+-- or via SQL for users to be able to access the data.
+-- Example for Zonas (repeat for other tables and operations as needed):
+-- ALTER TABLE public.Zonas ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "Public Zonas are viewable by everyone." ON public.Zonas FOR SELECT USING (true);
+-- CREATE POLICY "Users can insert Zonas." ON public.Zonas FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+-- CREATE POLICY "Users can update their own Zonas." ON public.Zonas FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id); -- Example if user_id column existed
+-- CREATE POLICY "Users can delete their own Zonas." ON public.Zonas FOR DELETE USING (auth.uid() = user_id); -- Example if user_id column existed
