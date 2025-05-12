@@ -85,8 +85,15 @@ export default function DriversPage() {
       if (error) throw error;
       setDrivers(data || []);
     } catch (error: any) {
-      toast({ title: "Error al cargar repartidores", description: error.message || "No se pudieron cargar los repartidores.", variant: "destructive" });
-      console.error("Error fetching drivers:", error);
+      const userMessage = error?.message || "No se pudieron cargar los repartidores. Intente más tarde.";
+      toast({ title: "Error al cargar repartidores", description: userMessage, variant: "destructive" });
+
+      // Improved console logging
+      if (error?.message) {
+        console.error("Error fetching drivers:", error.message, "Raw error object:", error);
+      } else {
+        console.error("Error fetching drivers: An error occurred without a specific message. Raw error object:", error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -144,8 +151,13 @@ export default function DriversPage() {
       setEditingDriver(null);
       setIsDialogOpen(false);
     } catch (error: any) {
-      toast({ title: "Error al guardar", description: error.message || "Ocurrió un error al guardar el repartidor.", variant: "destructive" });
-      console.error("Error submitting driver:", error);
+      const userMessage = error?.message || "Ocurrió un error al guardar el repartidor.";
+      toast({ title: "Error al guardar", description: userMessage, variant: "destructive" });
+      if (error?.message) {
+        console.error("Error submitting driver:", error.message, "Raw error object:", error);
+      } else {
+        console.error("Error submitting driver: An error occurred without a specific message. Raw error object:", error);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -158,8 +170,13 @@ export default function DriversPage() {
       fetchDrivers();
       toast({ title: "Repartidor Eliminado", description: "El repartidor ha sido eliminado.", variant: "destructive" });
     } catch (error: any) {
-      toast({ title: "Error al eliminar", description: error.message || "Ocurrió un error al eliminar el repartidor.", variant: "destructive" });
-      console.error("Error deleting driver:", error);
+      const userMessage = error?.message || "Ocurrió un error al eliminar el repartidor.";
+      toast({ title: "Error al eliminar", description: userMessage, variant: "destructive" });
+       if (error?.message) {
+        console.error("Error deleting driver:", error.message, "Raw error object:", error);
+      } else {
+        console.error("Error deleting driver: An error occurred without a specific message. Raw error object:", error);
+      }
     }
   };
 
