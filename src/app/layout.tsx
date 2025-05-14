@@ -85,10 +85,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, // Added for consistency, though initialScale=1 often implies this.
+  maximumScale: 1, 
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#00296B' }, // Primary color for light mode
-    { media: '(prefers-color-scheme: dark)', color: '#00102b' },  // Darker shade for dark mode
+    { media: '(prefers-color-scheme: light)', color: '#00296B' }, 
+    { media: '(prefers-color-scheme: dark)', color: '#00102b' },  
   ],
 };
 
@@ -101,7 +101,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning={true}>
       {/* Ensure no whitespace characters are rendered directly here */}
-      <body 
+      <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
