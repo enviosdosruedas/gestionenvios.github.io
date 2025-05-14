@@ -8,7 +8,7 @@ Desarrollar una aplicación web integral para gestionar las operaciones de entre
 
 **Tecnologías a Utilizar:**
 - Frontend: Next.js 15 (con App Router y Server Components por defecto), React 18, TypeScript.
-- UI Styling: Tailwind CSS (utilizando la paleta de colores especificada en `detallesproyecto.md` y `globals.css`), ShadCN UI para componentes.
+- UI Styling: Tailwind CSS, ShadCN UI para componentes.
 - Backend (Base de Datos): Supabase (PostgreSQL).
 - Inteligencia Artificial: Genkit (Google AI, específicamente `googleai/gemini-2.0-flash`) para la optimización de rutas.
 - Formularios: React Hook Form y Zod para validación.
@@ -27,7 +27,13 @@ Se requiere la creación de las siguientes tablas principales. Definir los campo
 
 **Diseño de la Interfaz de Usuario (UI):**
 - Apariencia: Moderna, profesional, intuitiva y totalmente responsiva (mobile-first).
-- Paleta de Colores: Utilizar la definida en `detallesproyecto.md` (Royal Blue, Mikado Yellow, Polynesian Blue, etc.), configurada en `globals.css` y `tailwind.config.ts`.
+- **Paleta de Colores (Tailwind CSS):**
+    - Primary color: Blue (#3498db) para transmitir confianza y fiabilidad. (Ej: `bg-blue-500`, `text-blue-500`)
+    - Secondary color: Gray (#ecf0f1) para fondos y elementos menos importantes. (Ej: `bg-gray-100`, `text-gray-700`)
+    - Accent: Green (#2ecc71) para mensajes de éxito y confirmaciones de acciones. (Ej: `bg-green-500`, `text-green-100`)
+- Tipografía: Fuente clara y legible para formularios y tablas.
+- Iconos: Iconos simples e intuitivos para acciones como crear, leer, actualizar y eliminar (usar Lucide-react).
+- Layouts: Diseños claros y seccionados para cada entidad (Clientes y Repartidores).
 - Componentes: Basados en ShadCN UI (Dialogs, Forms, Tables, Badges, Cards, Toasts, Skeletons).
 - Navegación Principal: Un sidebar persistente (colapsable/off-canvas) con los siguientes enlaces principales:
     - Dashboard
@@ -61,3 +67,4 @@ Se requiere la creación de las siguientes tablas principales. Definir los campo
 - Implementar indicadores de carga (skeletons, loaders) durante las operaciones asíncronas.
 - Utilizar Server Actions de Next.js para las mutaciones de datos.
 - Las rutas de las páginas deben ser en español cuando sea posible (ej. /zonas, /repartidores).
+
