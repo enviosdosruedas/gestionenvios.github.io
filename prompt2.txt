@@ -1,0 +1,85 @@
+
+**Nombre del Proyecto:** (A definir por el usuario, ejemplo: "Gestor de Clientes MDP")
+
+**Objetivo Principal:**
+Desarrollar una aplicación web utilizando un enfoque de "Prototype AI" para crear rápidamente un sistema de gestión de clientes, con un enfoque inicial en la ciudad de Mar del Plata, Argentina. La aplicación permitirá registrar y administrar clientes, validando sus direcciones mediante Google Maps.
+
+**Tecnologías a Utilizar (Sugeridas):**
+- Frontend: Next.js (con App Router y Server Components por defecto), React, TypeScript.
+- UI Styling: Tailwind CSS, ShadCN UI para componentes (o similar, según preferencia del AI).
+- Backend (Base de Datos): Supabase.
+- Inteligencia Artificial: Gemini (para asistencia en el desarrollo, generación de código, etc.).
+- Mapas y Geocodificación: Google Maps API.
+
+**Instrucciones para la IA de Prototipado:**
+
+1.  **Configuración Inicial del Proyecto:**
+    *   Asegurar que el proyecto Next.js esté configurado correctamente con TypeScript, Tailwind CSS y ShadCN UI (o una alternativa similar para componentes UI rápidos).
+    *   **Integración con Gemini:**
+        *   Configurar el entorno para utilizar una Gemini API Key. Por favor, solicita al usuario que provea su `GEMINI_API_KEY` y guíalo para configurarla en un archivo `.env`.
+        *   Utiliza Gemini para asistir en la generación de código, explicación de conceptos, y resolución de problemas durante el desarrollo.
+    *   **Conexión a Supabase:**
+        *   Configurar las variables de entorno en un archivo `.env` con las siguientes credenciales para Supabase:
+            *   `NEXT_PUBLIC_SUPABASE_URL=https://bselwjnzgqziizczqzxp.supabase.co`
+            *   `NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzZWx3am56Z3F6aWl6Y3pxenhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMjMyMDAsImV4cCI6MjA2MjU5OTIwMH0.2ilrqJ2ZeL-PF6eQ8YrsmUgp-qLeNnNF9T7MxeJEWL0`
+        *   Crear el cliente Supabase en `src/lib/supabaseClient.ts` (o una ubicación similar) para interactuar con la base de datos.
+    *   **Integración con Google Maps API:**
+        *   Configurar el entorno para utilizar una Google Maps API Key. Solicita al usuario que provea su `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` y guíalo para configurarla en el archivo `.env`. Esta clave debe tener habilitados los servicios de Geocoding API y Maps JavaScript API.
+
+2.  **Estructura de la Base de Datos (Supabase) para Clientes:**
+    *   Diseña y genera el código SQL para una tabla `Clientes` en Supabase.
+    *   Campos sugeridos para la tabla `Clientes`:
+        *   `id` (UUID, clave primaria, default gen_random_uuid())
+        *   `codigo_cliente` (TEXT, UNIQUE, NOT NULL - podría ser generado automáticamente o ingresado manualmente)
+        *   `nombre` (TEXT, NOT NULL)
+        *   `direccion_completa` (TEXT, NOT NULL - la dirección ingresada por el usuario)
+        *   `direccion_validada` (TEXT, NULLABLE - la dirección formateada y validada por Google Maps)
+        *   `latitud` (NUMERIC, NULLABLE)
+        *   `longitud` (NUMERIC, NULLABLE)
+        *   `place_id` (TEXT, NULLABLE - Google Maps Place ID)
+        *   `created_at` (TIMESTAMPTZ, default NOW())
+        *   `updated_at` (TIMESTAMPTZ, default NOW())
+    *   Asegúrate de incluir la función `trigger_set_timestamp()` y los triggers correspondientes para el campo `updated_at`.
+    *   Si la tabla ya existe y necesita ajustes, genera los comandos `ALTER TABLE` necesarios.
+
+3.  **Funcionalidades de la Aplicación:**
+
+    *   **Página Principal (Dashboard Sencillo):**
+        *   Crear una página de inicio básica (`/` o `/dashboard`).
+        *   Puede mostrar un mensaje de bienvenida y enlaces a las secciones principales (Clientes).
+
+    *   **Gestión de Clientes (`/clientes`):**
+        *   **CRUD completo para Clientes:**
+            *   **Crear:** Formulario para agregar nuevos clientes.
+                *   Campos: Código de Cliente (puede ser autogenerado o manual), Nombre, Dirección.
+                *   **Validación de Dirección con Google Maps:**
+                    *   Al ingresar la dirección, utilizar la API de Google Maps (Geocoding) para:
+                        *   Autocompletar la dirección.
+                        *   Validar que la dirección exista y esté dentro de Mar del Plata, Argentina. Si no es de Mar del Plata, mostrar un error o advertencia.
+                        *   Obtener la dirección formateada, latitud, longitud y Place ID.
+                    *   Almacenar tanto la dirección original ingresada como la información validada por Google Maps.
+            *   **Leer:** Listado tabular de todos los clientes mostrando código, nombre y dirección validada.
+            *   **Actualizar:** Formulario para editar la información de clientes existentes, con la misma validación de dirección.
+            *   **Eliminar:** Opción para borrar clientes (con confirmación).
+        *   **Interfaz:** Utilizar componentes de ShadCN UI (Dialogs para formularios, Table, Button, Input, etc.) para una experiencia de usuario moderna y profesional.
+        *   **Server Actions:** Utilizar Server Actions de Next.js para las mutaciones de datos (crear, actualizar, eliminar).
+
+4.  **Diseño y Estilo:**
+    *   Asegurar que la aplicación sea responsiva y accesible.
+    *   Utilizar una paleta de colores simple y profesional. Puedes tomar como base la siguiente, o proponer una alternativa:
+        *   Primario: Un azul corporativo (ej: `#005A9C`)
+        *   Secundario: Un gris claro (ej: `#F0F0F0`)
+        *   Acento: Un verde para acciones positivas (ej: `#28A745`)
+    *   La tipografía debe ser clara y legible.
+
+5.  **Próximos Pasos (Sugerencias para el futuro, no para la implementación inicial):**
+    *   Mostrar un mapa en la ficha del cliente con la ubicación.
+    *   Filtrado y búsqueda de clientes.
+
+**Primeros Pasos Sugeridos para el Desarrollo (para la IA):**
+1.  Configurar el proyecto Next.js y las variables de entorno.
+2.  Generar el SQL para la tabla `Clientes` y guiar al usuario para aplicarlo en Supabase.
+3.  Implementar el layout principal y la página de Dashboard básica.
+4.  Implementar el CRUD para `Clientes`, comenzando por el formulario de creación con la validación de dirección de Google Maps.
+
+**Nota:** Enfócate en la funcionalidad principal de gestión de clientes con validación de direcciones para este prototipo inicial.
