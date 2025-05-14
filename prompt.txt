@@ -48,8 +48,8 @@ Se requiere la creación de las siguientes tablas principales. Definir los campo
 3.  **Definición del Esquema SQL:** Generar y aplicar las migraciones SQL para crear todas las tablas mencionadas anteriormente en Supabase, asegurando las relaciones y constraints correctos. Prestar especial atención a la tabla `ClientesReparto` y su FK a `ClientesNuestros`, y cómo se vinculará a `Repartos` (probablemente a través de `DetallesReparto`).
 4.  **Tipos de Datos TypeScript:** Definir los tipos correspondientes a las tablas de la base de datos en `src/lib/types.ts`.
 5.  **Funcionalidad CRUD Inicial:**
-    - Implementar el CRUD completo para `Zonas` (`/zones`) como un primer módulo sencillo para probar la conexión y operaciones básicas con Supabase y la UI.
-    - Implementar el CRUD completo para `Repartidores` (`/drivers`).
+    - Implementar el CRUD completo para `Zonas` (`/zonas`) como un primer módulo sencillo para probar la conexión y operaciones básicas con Supabase y la UI.
+    - Implementar el CRUD completo para `Repartidores` (`/repartidores`).
     - Implementar el CRUD completo para `ClientesNuestros` (`/clients`).
     - Implementar el CRUD completo para `ClientesReparto` (`/clientes-reparto`), incluyendo la selección del `ClienteNuestro` asociado.
 6.  **Layout y Navegación:** Desarrollar el layout principal con el sidebar funcional.
@@ -60,3 +60,4 @@ Se requiere la creación de las siguientes tablas principales. Definir los campo
 - Asegurar un manejo de errores robusto y feedback al usuario mediante toasts.
 - Implementar indicadores de carga (skeletons, loaders) durante las operaciones asíncronas.
 - Utilizar Server Actions de Next.js para las mutaciones de datos.
+- Las rutas de las páginas deben ser en español cuando sea posible (ej. /zonas, /repartidores).
