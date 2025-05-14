@@ -1,0 +1,61 @@
+
+Inicio del Prompt para IA de Firebase Studio:
+
+**Nombre del Proyecto:** Viandas Express Admin
+
+**Objetivo Principal:**
+Desarrollar una aplicación web integral para gestionar las operaciones de entrega de una empresa en Mar del Plata, Argentina, que se dedica al reparto de viandas, mensajería y delivery general. Las funcionalidades clave incluyen la optimización de rutas de entrega y la administración eficiente de información crítica como clientes principales, clientes de reparto (clientes de los clientes), repartidores, productos, zonas y los repartos planificados.
+
+**Tecnologías a Utilizar:**
+- Frontend: Next.js 15 (con App Router y Server Components por defecto), React 18, TypeScript.
+- UI Styling: Tailwind CSS (utilizando la paleta de colores especificada en `detallesproyecto.md` y `globals.css`), ShadCN UI para componentes.
+- Backend (Base de Datos): Supabase (PostgreSQL).
+- Inteligencia Artificial: Genkit (Google AI, específicamente `googleai/gemini-2.0-flash`) para la optimización de rutas.
+- Formularios: React Hook Form y Zod para validación.
+- Iconos: Lucide-react.
+
+**Estructura Inicial de la Base de Datos (Supabase):**
+Se requiere la creación de las siguientes tablas principales. Definir los campos, tipos de datos (UUID para IDs, TEXT, TIMESTAMPTZ, etc.), claves primarias, claves foráneas y restricciones (NOT NULL, UNIQUE, CHECK) según se detalla en `detallesproyecto.md`. Implementar la función `trigger_set_timestamp` para actualizar automáticamente el campo `updated_at`.
+
+1.  `Zonas`: Para almacenar las diferentes zonas de reparto (ej: "Centro", "Sur").
+2.  `ClientesNuestros`: Para la información de los clientes directos de la empresa (nombre, dirección de retiro, servicios contratados, días de reparto, zona_id, etc.).
+3.  `Paradas`: (Nota: Esta tabla es para direcciones específicas de `ClientesNuestros`. La gestión CRUD de `Paradas` puede ser posterior, pero la tabla debe existir para soportar `Repartos` inicialmente si se usa el array de UUIDs. Considerar si `ClientesReparto` y `DetallesReparto` la reemplazarán funcionalmente para las entregas finales).
+4.  `Repartidores`: Información de los repartidores (nombre, vehículo, status: 'activo'/'inactivo', etc.).
+5.  `Repartos`: Información de cada reparto planificado (fecha, repartidor_id, zona_id, tanda, estado_entrega, y una forma de asociar las entregas/paradas específicas, por ejemplo, a través de una tabla de unión o una nueva tabla `DetallesReparto`).
+6.  `Productos`: Información de los productos ofrecidos (ej: viandas, con nombre, precio, estado: 'disponible'/'agotado', etc.).
+7.  `ClientesReparto`: Para la información de los destinatarios finales de los `ClientesNuestros` (nombre, dirección, horarios, restricciones, tipo_reparto, dias_especificos, y muy importante, `cliente_nuestro_id` como FK a `ClientesNuestros`).
+8.  `DetallesReparto` (Considerar crear esta tabla para vincular `Repartos` con `ClientesReparto`, incluyendo `valor_entrega`, `detalle_entrega`, `orden_visita`).
+
+**Diseño de la Interfaz de Usuario (UI):**
+- Apariencia: Moderna, profesional, intuitiva y totalmente responsiva (mobile-first).
+- Paleta de Colores: Utilizar la definida en `detallesproyecto.md` (Royal Blue, Mikado Yellow, Polynesian Blue, etc.), configurada en `globals.css` y `tailwind.config.ts`.
+- Componentes: Basados en ShadCN UI (Dialogs, Forms, Tables, Badges, Cards, Toasts, Skeletons).
+- Navegación Principal: Un sidebar persistente (colapsable/off-canvas) con los siguientes enlaces principales:
+    - Dashboard
+    - Repartidores
+    - Clientes (ClientesNuestros)
+    - Clientes Reparto (Para los clientes de nuestros clientes)
+    - Zonas
+    - Repartos
+    - Productos
+    - Optimizar Rutas
+- Layout: `src/app/(app)/layout.tsx` debe definir la estructura principal con el sidebar y el área de contenido.
+
+**Primeros Pasos Sugeridos para el Desarrollo:**
+1.  **Configuración del Proyecto:** Asegurar que Next.js, TypeScript, Tailwind CSS, y ShadCN UI estén configurados.
+2.  **Conexión a Supabase:** Configurar las variables de entorno (`.env`) para la URL y la clave anónima de Supabase. Crear el cliente Supabase en `src/lib/supabaseClient.ts`.
+3.  **Definición del Esquema SQL:** Generar y aplicar las migraciones SQL para crear todas las tablas mencionadas anteriormente en Supabase, asegurando las relaciones y constraints correctos. Prestar especial atención a la tabla `ClientesReparto` y su FK a `ClientesNuestros`, y cómo se vinculará a `Repartos` (probablemente a través de `DetallesReparto`).
+4.  **Tipos de Datos TypeScript:** Definir los tipos correspondientes a las tablas de la base de datos en `src/lib/types.ts`.
+5.  **Funcionalidad CRUD Inicial:**
+    - Implementar el CRUD completo para `Zonas` (`/zones`) como un primer módulo sencillo para probar la conexión y operaciones básicas con Supabase y la UI.
+    - Implementar el CRUD completo para `Repartidores` (`/drivers`).
+    - Implementar el CRUD completo para `ClientesNuestros` (`/clients`).
+    - Implementar el CRUD completo para `ClientesReparto` (`/clientes-reparto`), incluyendo la selección del `ClienteNuestro` asociado.
+6.  **Layout y Navegación:** Desarrollar el layout principal con el sidebar funcional.
+
+**Notas Adicionales:**
+- Referirse constantemente al archivo `detallesproyecto.md` para obtener especificaciones detalladas sobre campos, funcionalidades y flujos de trabajo.
+- Priorizar la claridad del código, la mantenibilidad y el rendimiento.
+- Asegurar un manejo de errores robusto y feedback al usuario mediante toasts.
+- Implementar indicadores de carga (skeletons, loaders) durante las operaciones asíncronas.
+- Utilizar Server Actions de Next.js para las mutaciones de datos.
