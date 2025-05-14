@@ -4,7 +4,7 @@ Inicio del Prompt para IA de Firebase Studio:
 **Nombre del Proyecto:** Viandas Express Admin
 
 **Objetivo Principal:**
-Desarrollar una aplicación web integral para gestionar las operaciones de entrega de una empresa en Mar del Plata, Argentina, que se dedica al reparto de viandas, mensajería y delivery general. Las funcionalidades clave incluyen la optimización de rutas de entrega y la administración eficiente de información crítica como clientes principales, clientes de reparto (clientes de los clientes), repartidores, productos, zonas y los repartos planificados.
+Desarrollar una aplicación web integral para gestionar las operaciones de entrega de una empresa en Mar del Plata, Argentina, que se dedica al reparto de viandas, mensajería y delivery general. Las funcionalidades clave incluyen la optimización de rutas de entrega y la administración eficiente de información crítica como clientes principales, clientes de reparto (clientes de los clientes), repartidores, zonas y los repartos planificados.
 
 **Tecnologías a Utilizar:**
 - Frontend: Next.js 15 (con App Router y Server Components por defecto), React 18, TypeScript.
@@ -22,9 +22,8 @@ Se requiere la creación de las siguientes tablas principales. Definir los campo
 3.  `Paradas`: (Nota: Esta tabla es para direcciones específicas de `ClientesNuestros`. La gestión CRUD de `Paradas` puede ser posterior, pero la tabla debe existir para soportar `Repartos` inicialmente si se usa el array de UUIDs. Considerar si `ClientesReparto` y `DetallesReparto` la reemplazarán funcionalmente para las entregas finales).
 4.  `Repartidores`: Información de los repartidores (nombre, vehículo, status: 'activo'/'inactivo', etc.).
 5.  `Repartos`: Información de cada reparto planificado (fecha, repartidor_id, zona_id, tanda, estado_entrega, y una forma de asociar las entregas/paradas específicas, por ejemplo, a través de una tabla de unión o una nueva tabla `DetallesReparto`).
-6.  `Productos`: Información de los productos ofrecidos (ej: viandas, con nombre, precio, estado: 'disponible'/'agotado', etc.).
-7.  `ClientesReparto`: Para la información de los destinatarios finales de los `ClientesNuestros` (nombre, dirección, horarios, restricciones, tipo_reparto, dias_especificos, y muy importante, `cliente_nuestro_id` como FK a `ClientesNuestros`).
-8.  `DetallesReparto` (Considerar crear esta tabla para vincular `Repartos` con `ClientesReparto`, incluyendo `valor_entrega`, `detalle_entrega`, `orden_visita`).
+6.  `ClientesReparto`: Para la información de los destinatarios finales de los `ClientesNuestros` (nombre, dirección, horarios, restricciones, tipo_reparto, dias_especificos, y muy importante, `cliente_nuestro_id` como FK a `ClientesNuestros`).
+7.  `DetallesReparto` (Considerar crear esta tabla para vincular `Repartos` con `ClientesReparto`, incluyendo `valor_entrega`, `detalle_entrega`, `orden_visita`).
 
 **Diseño de la Interfaz de Usuario (UI):**
 - Apariencia: Moderna, profesional, intuitiva y totalmente responsiva (mobile-first).
@@ -37,13 +36,15 @@ Se requiere la creación de las siguientes tablas principales. Definir los campo
     - Clientes Reparto (Para los clientes de nuestros clientes)
     - Zonas
     - Repartos
-    - Productos
     - Optimizar Rutas
 - Layout: `src/app/(app)/layout.tsx` debe definir la estructura principal con el sidebar y el área de contenido.
 
 **Primeros Pasos Sugeridos para el Desarrollo:**
 1.  **Configuración del Proyecto:** Asegurar que Next.js, TypeScript, Tailwind CSS, y ShadCN UI estén configurados.
-2.  **Conexión a Supabase:** Configurar las variables de entorno (`.env`) para la URL y la clave anónima de Supabase. Crear el cliente Supabase en `src/lib/supabaseClient.ts`.
+2.  **Conexión a Supabase:** Configurar las variables de entorno (`.env`) para la URL y la clave anónima de Supabase.
+    - `NEXT_PUBLIC_SUPABASE_URL=https://bselwjnzgqziizczqzxp.supabase.co`
+    - `NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzZWx3am56Z3F6aWl6Y3pxenhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMjMyMDAsImV4cCI6MjA2MjU5OTIwMH0.2ilrqJ2ZeL-PF6eQ8YrsmUgp-qLeNnNF9T7MxeJEWL0`
+    - Crear el cliente Supabase en `src/lib/supabaseClient.ts`.
 3.  **Definición del Esquema SQL:** Generar y aplicar las migraciones SQL para crear todas las tablas mencionadas anteriormente en Supabase, asegurando las relaciones y constraints correctos. Prestar especial atención a la tabla `ClientesReparto` y su FK a `ClientesNuestros`, y cómo se vinculará a `Repartos` (probablemente a través de `DetallesReparto`).
 4.  **Tipos de Datos TypeScript:** Definir los tipos correspondientes a las tablas de la base de datos en `src/lib/types.ts`.
 5.  **Funcionalidad CRUD Inicial:**
