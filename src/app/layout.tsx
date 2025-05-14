@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: `/og-image.png`,
+        url: `${APP_URL}/og-image.png`, // Ensure full URL for OG images
         width: 1200,
         height: 630,
         alt: `Logo de ${APP_NAME}`,
@@ -72,7 +72,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: APP_NAME,
     description: APP_DESCRIPTION,
-    images: [`/twitter-image.png`],
+    images: [`${APP_URL}/twitter-image.png`], // Ensure full URL for Twitter images
     // creator: '@yourtwitterhandle',
   },
   icons: {
@@ -85,10 +85,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 1, // Added for consistency, though initialScale=1 often implies this.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#00296B' },
-    { media: '(prefers-color-scheme: dark)', color: '#00102b' },
+    { media: '(prefers-color-scheme: light)', color: '#00296B' }, // Primary color for light mode
+    { media: '(prefers-color-scheme: dark)', color: '#00102b' },  // Darker shade for dark mode
   ],
 };
 
@@ -100,7 +100,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning={true}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      {/* Ensure no whitespace characters are rendered directly here */}
+      <body 
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true}
+      >
         {children}
         <Toaster />
       </body>
