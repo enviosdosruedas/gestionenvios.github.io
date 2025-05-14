@@ -1,0 +1,107 @@
+
+**Objetivo General:**
+Implementar una sección completa de "Gestión de Repartos" en la aplicación "Viandas Express Admin". Esta sección permitirá a los usuarios crear, ver, actualizar, eliminar y generar reportes detallados de los repartos diarios.
+
+**Tecnologías y Componentes:**
+- Next.js 15 (App Router, Server Components, Server Actions para mutaciones).
+- React 18, TypeScript.
+- Supabase para la base de datos (utilizar el cliente Supabase existente en `src/lib/supabaseClient.ts`).
+- ShadCN UI para todos los componentes de interfaz de usuario (Button, Table, Dialog, Form, Input, Select, Popover, Calendar, Badge, Card, Skeleton, Toast, etc.).
+- Lucide-react para iconos.
+- `date-fns` para formateo de fechas (localización en español `es`).
+- `react-hook-form` y `zod` para la gestión y validación de formularios.
+- Tipos de datos definidos en `src/lib/types.ts`.
+
+**1. Página Principal de Repartos (`src/app/(app)/deliveries/page.tsx`)**
+
+   **1.1. Visualización de Repartos:**
+      - Mostrar una tabla con los repartos existentes.
+      - Columnas de la tabla: Fecha, Repartidor (nombre), Cliente Principal (nombre, si aplica), Zona (nombre), Tanda, N° Items (cantidad de `detalles_reparto`), Estado (con badge de color), Acciones.
+      - Formatear la fecha a `PPP` en español (ej: "15 de mayo de 2024").
+      - El estado del reparto debe mostrarse con un `Badge` con colores distintivos:
+         - `pendiente`: Amarillo (ej: `bg-mikado-yellow-500 text-secondary-foreground`)
+         - `en curso`: Azul (ej: `bg-polynesian-blue-500 text-primary-foreground`)
+         - `entregado`: Verde (ej: `bg-green-500 text-primary-foreground`)
+         - `cancelado`: Rojo (ej: `bg-red-500 text-destructive-foreground`)
+         - `reprogramado`: Morado (ej: `bg-purple-500 text-primary-foreground`)
+      - En la columna "Acciones", incluir botones para:
+         - Editar el reparto.
+         - Eliminar el reparto (con confirmación).
+         - Ver Reporte (debe navegar a `src/app/(app)/deliveries/[id]/report/page.tsx`).
+      - Implementar estados de carga (skeletons) mientras se obtienen los datos.
+      - Manejo de errores y notificaciones (toasts) para operaciones CRUD.
+
+   **1.2. Creación y Edición de Repartos (Formulario en un Dialog):**
+      - El formulario debe permitir crear un nuevo reparto o editar uno existente.
+      - **Campos del formulario de Reparto:**
+         - `fecha`: Selector de calendario (Popover con Calendar), no permitir fechas pasadas.
+         - `repartidor_id`: `Select` con repartidores activos (`repartidores.status === 'activo'`).
+         - `cliente_nuestro_id`: `Select` con `ClientesNuestros`. Permitir "Sin cliente principal (Reparto General)" como opción, que enviaría `null` a la base de datos.
+         - `zona_id`: `Select` con `Zonas`.
+         - `tanda`: `Input` numérico (mínimo 1).
+         - `estado_entrega`: `Select` con los estados de `ALL_DELIVERY_STATUSES` de `lib/types.ts`.
+      - **Sección de "Ítems de Entrega" (DetallesReparto) dentro del formulario de Reparto:**
+         - Esta sección debe ser dinámica (usar `useFieldArray` de `react-hook-form`).
+         - Solo se habilita si se ha seleccionado un `cliente_nuestro_id`. Si se selecciona "Sin cliente principal", esta sección no se muestra o se deshabilita.
+         - Por cada ítem de entrega:
+            - `cliente_reparto_id`: `Select` que muestra los `ClientesReparto` asociados al `cliente_nuestro_id` seleccionado en el formulario principal. Mostrar nombre y dirección del cliente de reparto en las opciones del select.
+            - `valor_entrega`: `Input` numérico (opcional, para registrar el monto a cobrar en ARS).
+            - `detalle_entrega`: `Input` de texto (opcional, para notas específicas de esa entrega, ej: "Dejar en portería").
+            - `orden_visita`: Se determinará por el orden en que los ítems aparecen en la lista (índice del array).
+            - Botón para eliminar el ítem de entrega.
+         - Botón "Añadir Ítem" para agregar un nuevo detalle de reparto.
+         - Validar que se agregue al menos un ítem de entrega si se ha seleccionado un cliente principal.
+      - **Lógica del Formulario:**
+         - Al seleccionar un `cliente_nuestro_id`, se deben cargar dinámicamente los `ClientesReparto` correspondientes en los selects de "Ítems de Entrega". Si se cambia el `cliente_nuestro_id` principal, los ítems de entrega existentes deben borrarse (o advertir al usuario).
+         - Al guardar (crear o actualizar):
+            - Guardar el registro principal en la tabla `repartos`.
+            - Guardar (o actualizar/eliminar y recrear) los registros asociados en la tabla `detallesreparto`, vinculándolos con el `reparto_id` correspondiente.
+      - **Obtención de Datos para Selects:**
+         - Cargar `Repartidores` (solo activos), `ClientesNuestros`, y `Zonas` al iniciar la página o el diálogo.
+         - Cargar `ClientesReparto` dinámicamente basado en el `cliente_nuestro_id` seleccionado.
+
+**2. Página de Reporte de Reparto (`src/app/(app)/deliveries/[id]/report/page.tsx`)**
+
+   **2.1. Visualización del Reporte:**
+      - La página recibirá el `id` del reparto a través de los parámetros de la URL.
+      - Mostrar un encabezado con "Reporte del Reparto #ID_CORTO_DEL_REPARTO".
+      - Sección de "Resumen del Reparto":
+         - Fecha del reparto (formateada).
+         - Nombre del Repartidor.
+         - Nombre del Cliente Principal (si aplica).
+         - Nombre de la Zona general del reparto.
+         - Tanda.
+         - Estado actual del reparto.
+         - **Total de Paradas:** Contar cuántos `detallesreparto` tiene.
+         - **Valor Total a Cobrar:** Suma de todos los `valor_entrega` de los `detallesreparto` (formateado en ARS, ej: $1,250.50).
+      - Sección "Detalle de Paradas":
+         - Una tabla con cada ítem de entrega (`detallesreparto`) ordenado por `orden_visita`.
+         - Columnas: # (número de parada), Cliente Destino (nombre del `ClienteReparto`), Dirección (`ClientesReparto.direccion`), Horario Preferido (`ClientesReparto.horario_inicio` - `ClientesReparto.horario_fin`), Restricciones (`ClientesReparto.restricciones`), Valor (ARS), Notas de Entrega (`DetallesReparto.detalle_entrega`).
+      - Botón "Volver a Repartos".
+      - Botón "Exportar a PDF / Imprimir".
+
+   **2.2. Funcionalidad de "Exportar a PDF / Imprimir":**
+      - Al hacer clic, se debe invocar `window.print()`.
+      - Optimizar la vista de impresión usando CSS (definido en `globals.css` con `@media print`):
+         - Incluir el logo de la empresa "ViandasXpress" (desde `public/favicon.svg`) en la cabecera del PDF.
+         - Ocultar elementos no relevantes para la impresión (sidebar, botones de acción de la página, etc.).
+         - Asegurar que el contenido del reporte sea legible y esté bien formateado en la versión impresa.
+         - Ajustar márgenes y tamaños de fuente para una presentación profesional en A4.
+         - Las tablas deben verse correctamente, sin desbordamientos.
+
+   **2.3. Obtención de Datos:**
+      - Al cargar la página, obtener todos los datos del reparto específico usando su `id`. Esto incluye:
+         - Datos de la tabla `repartos`.
+         - Datos relacionados de `repartidores` (nombre).
+         - Datos relacionados de `zonas` (nombre).
+         - Datos relacionados de `clientesnuestros` (nombre).
+         - Todos los `detallesreparto` asociados, y para cada uno, los datos de su `clientesreparto` (nombre, dirección, horario_inicio, horario_fin, restricciones).
+
+**3. Consideraciones Adicionales:**
+   - **Responsividad:** Asegurar que tanto la página principal de repartos como el formulario y la página de reporte sean completamente responsivos y usables en dispositivos móviles, tablets y desktops. Prestar especial atención a la visualización de tablas y modales en pantallas pequeñas.
+   - **Manejo de Errores y Carga:** Implementar indicadores de carga (skeletons) durante la obtención de datos y toasts para notificar al usuario sobre el resultado de las operaciones (éxito, error).
+   - **Diseño General:** Mantener la consistencia con el diseño moderno y profesional del resto de la aplicación.
+
+Este prompt cubre todos los aspectos solicitados para la implementación de la funcionalidad de gestión de repartos y sus reportes.
+
+    
